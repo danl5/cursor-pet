@@ -1,0 +1,46 @@
+#pragma once
+#include <M5Unified.h>
+#include <TFT_eSPI.h>
+
+// Pet states
+enum PetState {
+    PET_SLEEP,
+    PET_IDLE,
+    PET_THINKING,
+    PET_WORKING,
+    PET_ERROR
+};
+
+class PixelPet {
+public:
+    PixelPet(TFT_eSPI& lcd);
+    void begin();
+    void setState(PetState s);
+    void setStats(int tokens, int tasks, int errors);
+    void tick();
+
+private:
+    TFT_eSPI& _lcd;
+    TFT_eSprite _sprite;
+    PetState _state;
+    PetState _lastState;
+    uint32_t _frame;
+    uint32_t _lastTick;
+    int _tokens, _tasks, _errors;
+
+    void _drawHud();
+    void _drawSleep();
+    void _drawIdle();
+    void _drawThink();
+    void _drawWork();
+    void _drawError();
+    void _drawCat(int cx, int cy, uint16_t bodyColor);
+    void _drawEars(int cx, int cy, uint16_t color);
+    void _drawEyesOpen(int cx, int cy);
+    void _drawEyesClosed(int cx, int cy);
+    void _drawCheeks(int cx, int cy);
+    void _drawZzz(int cx, int cy, int frame);
+    void _drawThoughtBubbles(int cx, int cy, int frame);
+    void _drawGlowRing(int cx, int cy);
+    void _drawPaws(int cx, int cy, int frame);
+};
