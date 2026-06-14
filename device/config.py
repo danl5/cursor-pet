@@ -1,0 +1,3 @@
+SSID = "Zero"
+PASSWORD = "lnc.2019"
+HTTP_PORT = 80

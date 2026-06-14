@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "command": ".cursor/hooks/notify.sh idle"
+      }
+    ],
+    "sessionEnd": [
+      {
+        "command": ".cursor/hooks/notify.sh idle"
+      }
+    ],
+    "afterAgentThought": [
+      {
+        "command": ".cursor/hooks/notify.sh thinking"
+      }
+    ],
+    "preToolUse": [
+      {
+        "command": ".cursor/hooks/notify.sh working",
+        "matcher": "Shell|Write|Edit"
+      }
+    ],
+    "postToolUse": [
+      {
+        "command": ".cursor/hooks/notify.sh working",
+        "matcher": "Shell|Write|Edit"
+      }
+    ],
+    "stop": [
+      {
+        "command": ".cursor/hooks/notify.sh idle"
+      }
+    ],
+    "postToolUseFailure": [
+      {
+        "command": ".cursor/hooks/on_error.sh"
+      }
+    ]
+  }
+}
