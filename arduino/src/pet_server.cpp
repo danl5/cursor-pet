@@ -141,7 +141,11 @@ void PetServer::_handleHealth() {
 }
 
 void PetServer::_handleRoot() {
-    _server.send(200, "text/plain", "Cursor Pet v1.0");
+    if (inAPMode) {
+        _handleConfigPage();
+    } else {
+        _server.send(200, "text/plain", "Cursor Pet v1.0");
+    }
 }
 
 void PetServer::_handleConfigPage() {
