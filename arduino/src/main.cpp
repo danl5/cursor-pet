@@ -1,28 +1,22 @@
 #include <M5GFX.h>
+#include <M5Unified.h>
 #include <WiFi.h>
 #include <WebServer.h>
-#include <Wire.h>
-#include <M5PM1.h>
 #include "config.h"
 #include "settings.h"
 #include "pet.h"
 #include "pet_server.h"
 
-// Global objects
 M5GFX* lcd = nullptr;
-M5PM1 pm1;
 PixelPet pet;
 PetServer server(pet, HTTP_PORT);
 
-// Battery state
 static int batteryPct = 0;
 static bool batteryOk = false;
 
-// Button pins (StickS3: KEY1=G11, KEY2=G12)
 #define BTN_A_PIN 11
 #define BTN_B_PIN 12
 
-// Display modes
 enum DisplayMode {
     MODE_PET,
     MODE_STATUS
@@ -47,17 +41,15 @@ void readButtons() {
 }
 
 void readBattery() {
-    uint16_t vbat = 0;
-    if (pm1.readVbat(&vbat) == M5PM1_OK) {
-        int pct = (int)((vbat - 3000.0f) / (4200.0f - 3000.0f) * 100.0f);
-        if (pct < 0) pct = 0;
-        if (pct > 100) pct = 100;
+    int pct = M5.Power.getBatteryLevel();
+    if (pct >= 0) {
         batteryPct = pct;
         batteryOk = true;
+    } else {
+        batteryOk = false;
     }
 }
 
-// Status display
 void drawStatusScreen() {
     lcd->fillScreen(TFT_BLACK);
 
@@ -129,6 +121,12 @@ void drawStatusScreen() {
         y += lineH + 6;
     }
 
+    lcd->setTextColor(0xC618, TFT_BLACK);
+    char sbuf[32];
+    snprintf(sbuf, sizeof(sbuf), "Streak: %d day(s)", pet.getStreakCount());
+    lcd->drawString(sbuf, 4, y);
+    y += lineH + 6;
+
     lcd->setTextColor(0x4208, TFT_BLACK);
     lcd->drawString("A: Back to pet", 4, y);
     y += lineH;
@@ -145,43 +143,56 @@ void drawStatusScreen() {
     }
 }
 
-// BSSID scanning for same-name APs
-bool connectWiFi(const char* ssid, const char* password) {
+bool connectWiFi(const char* ssid, const char* password, const char* identity, LovyanGFX* display) {
     if (strlen(ssid) == 0) return false;
 
     WiFi.mode(WIFI_STA);
     WiFi.disconnect();
     delay(100);
 
-    Serial.printf("Scanning for %s...\n", ssid);
-    int n = WiFi.scanNetworks();
-    int bestIdx = -1;
-    int bestRSSI = -999;
+    PixelPet::drawBootScreen(display, "Scanning WiFi...", 20);
 
-    for (int i = 0; i < n; i++) {
-        if (WiFi.SSID(i) == ssid && WiFi.RSSI(i) > bestRSSI) {
-            bestIdx = i;
-            bestRSSI = WiFi.RSSI(i);
+    if (strlen(identity) > 0) {
+        Serial.printf("Enterprise WiFi: %s (identity: %s)\n", ssid, identity);
+        WiFi.begin(ssid, WPA2_AUTH_PEAP, identity, identity, password);
+    } else {
+        Serial.printf("Scanning for %s...\n", ssid);
+        int n = WiFi.scanNetworks();
+        int bestIdx = -1;
+        int bestRSSI = -999;
+
+        for (int i = 0; i < n; i++) {
+            if (WiFi.SSID(i) == ssid && WiFi.RSSI(i) > bestRSSI) {
+                bestIdx = i;
+                bestRSSI = WiFi.RSSI(i);
+            }
+        }
+
+        if (bestIdx >= 0) {
+            uint8_t bssid[6];
+            memcpy(bssid, WiFi.BSSID(bestIdx), 6);
+            WiFi.scanDelete();
+            Serial.printf("Found %s (RSSI:%d), connecting...\n", ssid, bestRSSI);
+            PixelPet::drawBootScreen(display, "Connecting...", 50);
+            WiFi.begin(ssid, password, 0, bssid);
+        } else {
+            WiFi.scanDelete();
+            Serial.printf("%s not found, trying without BSSID...\n", ssid);
+            PixelPet::drawBootScreen(display, "Connecting...", 50);
+            WiFi.begin(ssid, password);
         }
     }
 
-    if (bestIdx >= 0) {
-        uint8_t bssid[6];
-        memcpy(bssid, WiFi.BSSID(bestIdx), 6);
-        WiFi.scanDelete();
-        Serial.printf("Found %s (RSSI:%d), connecting...\n", ssid, bestRSSI);
-        WiFi.begin(ssid, password, 0, bssid);
-    } else {
-        WiFi.scanDelete();
-        Serial.printf("%s not found, trying without BSSID...\n", ssid);
-        WiFi.begin(ssid, password);
-    }
-
-    for (int i = 0; i < 40; i++) {
+    for (int i = 0; i < 20; i++) {
         if (WiFi.status() == WL_CONNECTED) {
             Serial.printf("Connected! IP: %s\n", WiFi.localIP().toString().c_str());
+            configTime(0, 0, "pool.ntp.org", "time.nist.gov");
+            PixelPet::drawBootScreen(display, "Connected!", 100);
+            delay(300);
             return true;
         }
+        int progress = 50 + (i * 25) / 20;
+        PixelPet::drawBootScreen(display, "Connecting...", progress);
         delay(500);
     }
     Serial.println("WiFi connect failed");
@@ -197,56 +208,136 @@ void startAPMode() {
     inAPMode = true;
 }
 
+static int todayYMD() {
+    auto dt = M5.Rtc.getDateTime();
+    return dt.date.year * 10000 + dt.date.month * 100 + dt.date.date;
+}
+
+static void checkStreak(int today) {
+    DeviceSettings& s = settingsGet();
+    int last = s.streakLastDay;
+    int count = s.streakCount;
+
+    if (today == last) return;
+
+    if (today == 0 || last == 0) {
+        count = 1;
+    } else if (today == last + 1) {
+        count++;
+    } else {
+        count = 1;
+    }
+
+    s.streakCount = count;
+    s.streakLastDay = today;
+    pet.setStreak(count, today);
+
+    bool milestone = false;
+    if (count == STREAK_MILESTONE_WEEK) {
+        pet.triggerCelebrate("7 Day Streak!");
+        milestone = true;
+    } else if (count == STREAK_MILESTONE_MONTH) {
+        pet.triggerCelebrate("30 Day Streak!");
+        milestone = true;
+    } else if (count == STREAK_MILESTONE_100) {
+        pet.triggerCelebrate("100 Days!");
+        milestone = true;
+    } else if (count == STREAK_MILESTONE_YEAR) {
+        pet.triggerCelebrate("1 Year Streak!");
+        milestone = true;
+    }
+
+    if (!milestone && count > 1 && count % 10 == 0) {
+        pet.triggerCelebrate("Keep Going!");
+    }
+
+    settingsSave();
+}
+
+static bool imuOk = false;
+static float accelX = 0, accelY = 0, accelZ = 0;
+static uint32_t lastShakeMs = 0;
+
+static void readIMU() {
+    if (!imuOk) return;
+    M5.Imu.getAccel(&accelX, &accelY, &accelZ);
+}
+
+static void checkShake() {
+    if (!imuOk) return;
+    float mag = sqrtf(accelX * accelX + accelY * accelY + accelZ * accelZ);
+    if (mag > SHAKE_THRESHOLD) {
+        uint32_t now = millis();
+        if (now - lastShakeMs > SHAKE_COOLDOWN_MS) {
+            lastShakeMs = now;
+            pet.triggerShake();
+            Serial.printf("Shake detected! mag=%.2f\n", mag);
+        }
+    }
+}
+
 void setup() {
     Serial.begin(115200);
 
-    // Init buttons
     pinMode(BTN_A_PIN, INPUT_PULLUP);
     pinMode(BTN_B_PIN, INPUT_PULLUP);
 
-    // Enable EXT_5V_EN (GPIO38 = LCD BL + 5V power enable) BEFORE display init
-    pinMode(38, OUTPUT);
-    digitalWrite(38, HIGH);
-    delay(100);
+    auto cfg = M5.config();
+    cfg.serial_baudrate = 115200;
+    M5.begin(cfg);
 
-    // Init I2C and M5PM1 for battery reading
-    Wire.begin(47, 48);
-    if (pm1.begin(&Wire, M5PM1_DEFAULT_ADDR, 47, 48, M5PM1_I2C_FREQ_100K) == M5PM1_OK) {
-        Serial.println("M5PM1 init OK");
-        readBattery();
-        pet.setBattery(batteryPct);
+    imuOk = M5.Imu.isEnabled();
+    if (imuOk) {
+        Serial.println("BMI270 IMU ready");
     } else {
-        Serial.println("M5PM1 init failed");
+        Serial.println("IMU not available - shake disabled");
     }
 
-    // Init display
-    lcd = new M5GFX();
-    lcd->init();
+    lcd = &M5.Lcd;
     lcd->setRotation(0);
     lcd->fillScreen(TFT_BLACK);
+
+    PixelPet::drawBootScreen(lcd, "Starting...", 10);
+
+    readBattery();
+    pet.setBattery(batteryPct);
 
     pet.begin(lcd);
     settingsLoad();
 
     DeviceSettings& s = settingsGet();
+    pet.setGrowthData(s.totalTasks, s.growthStage);
+    pet.setStreak(s.streakCount, s.streakLastDay);
+
     bool connected = false;
 
     if (s.hasConfig) {
-        connected = connectWiFi(s.wifiSSID, s.wifiPassword);
+        PixelPet::drawBootScreen(lcd, "Connecting WiFi...", 30);
+        connected = connectWiFi(s.wifiSSID, s.wifiPassword, s.wifiIdentity, lcd);
     }
 
     if (!connected) {
+        PixelPet::drawBootScreen(lcd, "Starting AP mode...", 80);
+        delay(300);
         startAPMode();
     }
 
+    int today = todayYMD();
+    if (today > 0) {
+        checkStreak(today);
+    }
+
     server.begin();
+    PixelPet::drawBootScreen(lcd, "Ready!", 100);
+    delay(500);
 }
 
 void loop() {
     readButtons();
+    readIMU();
+    checkShake();
     delay(10);
 
-    // B button: short press = toggle display, long press = enter AP mode
     if (btnB_released) {
         uint32_t held = millis() - lastBPress;
         if (held >= LONG_PRESS_MS) {
@@ -271,21 +362,32 @@ void loop() {
         lastBPress = millis();
     }
 
-    // A button: back to pet mode from status
     if (btnA_pressed && currentMode == MODE_STATUS) {
         currentMode = MODE_PET;
     }
     btnA_pressed = false;
 
-    // Update battery every 10 seconds
     static uint32_t lastBatteryRead = 0;
+    static int lastDayCheck = 0;
     if (millis() - lastBatteryRead >= 10000) {
         lastBatteryRead = millis();
         readBattery();
         pet.setBattery(batteryPct);
+
+        DeviceSettings& s = settingsGet();
+        if (s.totalTasks != pet.getTotalTasks() || s.growthStage != pet.getGrowthStage()) {
+            s.totalTasks = pet.getTotalTasks();
+            s.growthStage = pet.getGrowthStage();
+            settingsSave();
+        }
+
+        int today = todayYMD();
+        if (today > 0 && today != lastDayCheck) {
+            lastDayCheck = today;
+            checkStreak(today);
+        }
     }
 
-    // Update display
     switch (currentMode) {
         case MODE_PET:
             server.handleClient();

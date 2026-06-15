@@ -43,6 +43,11 @@ button{width:100%;padding:12px;border:none;border-radius:6px;font-size:1em;font-
 <input type="password" id="inputPass" placeholder="Enter WiFi password">
 <div class="hint">Leave empty for open network</div>
 </div>
+<div class="form-group">
+<label>Identity (Enterprise WiFi)</label>
+<input type="text" id="inputIdentity" placeholder="Leave empty for personal WiFi">
+<div class="hint">For WPA2-Enterprise networks (e.g. corporate WiFi). Identity is usually your username.</div>
+</div>
 <button class="btn-save" onclick="saveConfig()">Save & Reboot</button>
 <button class="btn-reboot" onclick="reboot()">Reboot Device</button>
 <script>
@@ -51,13 +56,15 @@ document.getElementById('status').textContent=d.connected?'Connected':'Not conne
 document.getElementById('ssid').textContent=d.ssid||'(none)';
 document.getElementById('ip').textContent=d.ip||'-';
 if(d.ssid)document.getElementById('inputSsid').placeholder=d.ssid;
+if(d.identity)document.getElementById('inputIdentity').placeholder=d.identity;
 });
 function saveConfig(){
 var s=document.getElementById('inputSsid').value;
 var p=document.getElementById('inputPass').value;
+var i=document.getElementById('inputIdentity').value;
 if(!s){alert('Please enter WiFi SSID');return;}
 fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},
-body:JSON.stringify({ssid:s,password:p})})
+body:JSON.stringify({ssid:s,password:p,identity:i})})
 .then(r=>r.json()).then(d=>{
 if(d.status==='ok'){alert('Saved! Device will reboot.');setTimeout(()=>location.reload(),3000);}
 else alert('Error: '+d.error);
@@ -83,6 +90,10 @@ void PetServer::begin() {
     _server.on("/api/config", HTTP_GET, [this]() { _handleConfigGet(); });
     _server.on("/api/config", HTTP_POST, [this]() { _handleConfigSave(); });
     _server.on("/api/reboot", HTTP_POST, [this]() { _handleReboot(); });
+    _server.on("/api/growth", HTTP_GET, [this]() { _handleGrowth(); });
+    _server.on("/api/growth", HTTP_POST, [this]() { _handleGrowthReset(); });
+    _server.on("/api/activity", HTTP_POST, [this]() { _handleActivity(); });
+    _server.on("/api/streak", HTTP_GET, [this]() { _handleStreak(); });
     _server.begin();
     Serial.println("HTTP server started");
 }
@@ -157,6 +168,7 @@ void PetServer::_handleConfigGet() {
     JsonDocument doc;
     doc["connected"] = (WiFi.status() == WL_CONNECTED);
     doc["ssid"] = s.hasConfig ? s.wifiSSID : "";
+    doc["identity"] = s.hasConfig ? s.wifiIdentity : "";
     if (WiFi.status() == WL_CONNECTED) {
         doc["ip"] = WiFi.localIP().toString();
     } else if (inAPMode) {
@@ -184,13 +196,14 @@ void PetServer::_handleConfigSave() {
 
     const char* ssid = doc["ssid"] | "";
     const char* password = doc["password"] | "";
+    const char* identity = doc["identity"] | "";
 
     if (strlen(ssid) == 0) {
         _server.send(400, "application/json", "{\"error\":\"ssid required\"}");
         return;
     }
 
-    settingsSetWiFi(ssid, password);
+    settingsSetWiFi(ssid, password, identity);
     Serial.printf("WiFi config saved: %s\n", ssid);
     _server.send(200, "application/json", "{\"status\":\"ok\"}");
 
@@ -202,4 +215,57 @@ void PetServer::_handleReboot() {
     _server.send(200, "application/json", "{\"status\":\"rebooting\"}");
     delay(500);
     ESP.restart();
+}
+
+void PetServer::_handleGrowth() {
+    JsonDocument doc;
+    const char* stages[] = {"baby", "kitten", "adult", "wizard"};
+    doc["stage"] = stages[_pet.getGrowthStage()];
+    doc["stageId"] = _pet.getGrowthStage();
+    doc["totalTasks"] = _pet.getTotalTasks();
+    String json;
+    serializeJson(doc, json);
+    _server.send(200, "application/json", json);
+}
+
+void PetServer::_handleGrowthReset() {
+    settingsResetGrowth();
+    _pet.setGrowthData(0, 0);
+    _server.send(200, "application/json", "{\"status\":\"ok\"}");
+}
+
+void PetServer::_handleActivity() {
+    if (!_server.hasArg("plain")) {
+        _server.send(400, "application/json", "{\"error\":\"no body\"}");
+        return;
+    }
+
+    JsonDocument doc;
+    DeserializationError err = deserializeJson(doc, _server.arg("plain"));
+    if (err) {
+        _server.send(400, "application/json", "{\"error\":\"invalid json\"}");
+        return;
+    }
+
+    int thoughts = doc["thoughts"] | 0;
+    int tools = doc["tools"] | 0;
+    _pet.addActivity(thoughts, tools);
+
+    JsonDocument resp;
+    resp["status"] = "ok";
+    resp["totalThoughts"] = _pet.getActivityThoughts();
+    resp["totalTools"] = _pet.getActivityTools();
+    String json;
+    serializeJson(resp, json);
+    _server.send(200, "application/json", json);
+}
+
+void PetServer::_handleStreak() {
+    DeviceSettings& s = settingsGet();
+    JsonDocument doc;
+    doc["streak"] = s.streakCount;
+    doc["lastDay"] = s.streakLastDay;
+    String json;
+    serializeJson(doc, json);
+    _server.send(200, "application/json", json);
 }

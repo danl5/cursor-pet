@@ -21,4 +21,8 @@ private:
     void _handleConfigGet();
     void _handleConfigSave();
     void _handleReboot();
+    void _handleGrowth();
+    void _handleGrowthReset();
+    void _handleActivity();
+    void _handleStreak();
 };

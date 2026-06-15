@@ -18,14 +18,12 @@
     ],
     "preToolUse": [
       {
-        "command": ".cursor/hooks/notify.sh working",
-        "matcher": "Shell|Write|Edit"
+        "command": ".cursor/hooks/notify.sh working"
       }
     ],
     "postToolUse": [
       {
-        "command": ".cursor/hooks/notify.sh working",
-        "matcher": "Shell|Write|Edit"
+        "command": ".cursor/hooks/notify.sh working"
       }
     ],
     "stop": [
