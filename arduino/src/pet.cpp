@@ -128,7 +128,6 @@ void PixelPet::tick() {
             _state = _lastState;
             _frame = 0;
         }
-        _sprite->fillScreen(C_BG);
         _drawHud();
         _sprite->pushSprite(0, 0);
         _frame++;
