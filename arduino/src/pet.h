@@ -38,6 +38,7 @@ public:
     PixelPet();
     void begin(LovyanGFX* display);
     void setState(PetState s);
+    PetState getState() const { return _state; }
     void setStats(int tokens, int tasks, int errors);
     void setBattery(int pct);
     void setGrowthData(int totalTasks, int stage);

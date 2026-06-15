@@ -3,37 +3,37 @@
   "hooks": {
     "sessionStart": [
       {
-        "command": ".cursor/hooks/notify.sh reset"
+        "command": ".cursor/hooks/notify_ble.py reset"
       }
     ],
     "sessionEnd": [
       {
-        "command": ".cursor/hooks/notify.sh idle"
+        "command": ".cursor/hooks/notify_ble.py idle"
       }
     ],
     "afterAgentThought": [
       {
-        "command": ".cursor/hooks/notify.sh thinking"
+        "command": ".cursor/hooks/notify_ble.py thinking"
       }
     ],
     "preToolUse": [
       {
-        "command": ".cursor/hooks/notify.sh working"
+        "command": ".cursor/hooks/notify_ble.py working"
       }
     ],
     "postToolUse": [
       {
-        "command": ".cursor/hooks/notify.sh working"
+        "command": ".cursor/hooks/notify_ble.py working"
       }
     ],
     "stop": [
       {
-        "command": ".cursor/hooks/notify.sh idle"
+        "command": ".cursor/hooks/notify_ble.py idle"
       }
     ],
     "postToolUseFailure": [
       {
-        "command": ".cursor/hooks/on_error.sh"
+        "command": ".cursor/hooks/notify_ble.py error"
       }
     ]
   }
