@@ -6,7 +6,7 @@ A pixel pet companion for your Cursor AI coding sessions, running on M5Stack Sti
 
 - **3 states with real-time animations**: Idle (blinking), Thinking (thought bubbles), Working (green glow)
 - **Procedurally generated** — no image files needed, all animation is drawn in code
-- **Double-buffered rendering** — zero flicker via TFT_eSprite
+- **Double-buffered rendering** — zero flicker via M5Canvas (M5GFX sprite)
 - **WiFi controlled**: Cursor hooks POST state changes over HTTP
 - **Easy WiFi setup**: AP mode with web config page, no code changes needed
 
@@ -101,7 +101,7 @@ Should return `{"status":"ok"}`.
 ```
 Cursor Agent
     │
-    ├── sessionStart     ──→ notify.sh idle
+    ├── sessionStart     ──→ notify.sh reset   (idle + zero counters)
     ├── afterAgentThought ──→ notify.sh thinking
     ├── preToolUse        ──→ notify.sh working
     ├── postToolUse       ──→ notify.sh working
@@ -120,7 +120,7 @@ Cursor Agent
 | Endpoint | Method | Body | Description |
 |----------|--------|------|-------------|
 | `/api/state` | POST | `{"state":"idle\|thinking\|working"}` | Set pet state |
-| `/api/stats` | POST | `{"tokens":N,"tasks":N,"errors":N}` | Update stats |
+| `/api/stats` | POST | `{"tokens":N,"tasks":N,"errors":N}` | Set counters to absolute values (used by `sessionStart` to reset) |
 | `/api/config` | GET | — | Get WiFi status and config |
 | `/api/config` | POST | `{"ssid":"...","password":"..."}` | Save WiFi config & reboot |
 | `/api/reboot` | POST | — | Reboot device |
@@ -141,6 +141,16 @@ curl -X POST http://192.168.x.x/api/stats \
   -d '{"tokens":1234,"tasks":5,"errors":0}'
 ```
 
+### HUD counters (`T` / `F` / `E`)
+
+The bottom of the pet screen shows three running totals for the current session:
+
+- **`F` (tasks)** — auto-incremented on the device each time the pet enters the **Working** state (i.e. once per tool-use burst). No hook needed.
+- **`E` (errors)** — auto-incremented on the device each time it enters the **Error** state (driven by `postToolUseFailure`).
+- **`T` (tokens)** — not tracked automatically (hooks don't expose token counts); stays `0` unless you set it manually via `POST /api/stats`.
+
+Counters are zeroed at `sessionStart` (via `notify.sh reset`) and otherwise persist until reboot.
+
 ## Pet States
 
 | State | Animation | Trigger |
@@ -158,11 +168,11 @@ cursor-pet/
 ├── arduino/
 │   ├── platformio.ini        # PlatformIO build config
 │   └── src/
-│       ├── config.h          # Display/pet constants
-│       ├── settings.h        # NVS settings (WiFi config)
-│       ├── main.cpp          # Entry point, WiFi, AP mode, buttons
-│       ├── pet.h / pet.cpp   # Pixel cat renderer (TFT_eSprite)
-│       └── server.h / server.cpp  # HTTP server, config page, JSON API
+│       ├── config.h                    # Display/pet constants
+│       ├── settings.h / settings.cpp   # NVS settings (WiFi config)
+│       ├── main.cpp                    # Entry point, WiFi, AP mode, buttons
+│       ├── pet.h / pet.cpp             # Pixel cat renderer (M5Canvas sprite)
+│       └── pet_server.h / pet_server.cpp  # HTTP server, config page, JSON API
 ├── hooks/
 │   ├── hooks.json            # Cursor hook configuration
 │   ├── notify.sh             # State notification script
@@ -177,5 +187,5 @@ cursor-pet/
 | LCD not displaying | Check USB connection, re-run `pio run -t upload` |
 | WiFi connection fails | Long press B to enter AP mode, reconfigure via `192.168.4.1` |
 | Pet not responding to Cursor | Verify `CURSOR_PET_IP` env var, test with `curl /health` |
-| Flickering | Should not happen with TFT_eSprite; check if using correct firmware |
+| Flickering | Should not happen with M5Canvas double buffering; check if using correct firmware |
 | Want to reset WiFi | Long press B to enter AP mode, or flash with `pio run -t erase && pio run -t upload` |

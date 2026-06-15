@@ -27,6 +27,10 @@ void PixelPet::begin(LovyanGFX* display) {
 
 void PixelPet::setState(PetState s) {
     if (s != _state) {
+        // Auto-increment session counters on entry into these states.
+        // Shell hooks are stateless, so the device owns the running totals.
+        if (s == PET_WORKING)      _tasks++;
+        else if (s == PET_ERROR)   _errors++;
         _state = s;
         _frame = 0;
     }
