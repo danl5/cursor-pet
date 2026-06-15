@@ -226,6 +226,7 @@ class PetServerCallbacks : public BLEServerCallbacks {
 
 class PetCharCallbacks : public BLECharacteristicCallbacks {
     void onWrite(BLECharacteristic* c) override {
+        bleConnected = true;
         handleBLECommand(c->getValue().c_str());
     }
 };
