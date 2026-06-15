@@ -5,6 +5,7 @@
 #include <BLEUtils.h>
 #include <BLE2902.h>
 #include <ArduinoJson.h>
+#include <Preferences.h>
 #include "config.h"
 #include "settings.h"
 #include "pet.h"
@@ -28,6 +29,10 @@ static BLECharacteristic* pTxChar = nullptr;
 
 static int batteryPct = -1;
 
+static bool authPending = false;
+static bool authAccepted = false;
+static bool authRejected = false;
+
 void readButtons() {
     static bool lastA = false, lastB = false;
     bool a = (digitalRead(BTN_A_PIN) == LOW);
@@ -41,6 +46,31 @@ void readButtons() {
 void readBattery() {
     int pct = M5.Power.getBatteryLevel();
     if (pct >= 0) batteryPct = pct;
+}
+
+void drawAuthScreen(const String& name) {
+    lcd->fillScreen(TFT_BLACK);
+
+    lcd->setTextDatum(TC_DATUM);
+    lcd->setTextColor(0xFEA0, TFT_BLACK);
+    lcd->setTextSize(2);
+    lcd->drawString("Allow Connection?", LCD_WIDTH / 2, 30);
+
+    lcd->setTextColor(0xC618, TFT_BLACK);
+    lcd->setTextSize(1);
+    lcd->drawString(name.c_str(), LCD_WIDTH / 2, 65);
+
+    lcd->setTextColor(0x07E0, TFT_BLACK);
+    lcd->setTextSize(2);
+    lcd->drawString("A = Yes", LCD_WIDTH / 2, 110);
+
+    lcd->setTextColor(0xF800, TFT_BLACK);
+    lcd->drawString("B = No", LCD_WIDTH / 2, 145);
+
+    lcd->setTextColor(0x4208, TFT_BLACK);
+    lcd->setTextSize(1);
+    lcd->drawString("Press A to authorize", LCD_WIDTH / 2, 180);
+    lcd->drawString("this device to connect", LCD_WIDTH / 2, 195);
 }
 
 void drawStatusScreen() {
@@ -106,7 +136,7 @@ void drawStatusScreen() {
     lcd->setTextColor(0x4208, TFT_BLACK);
     lcd->drawString("A: Back to pet", 4, y);
     y += lineH;
-    lcd->drawString("Long B: Factory reset", 4, y);
+    lcd->drawString("Long B: Reset + clear auth", 4, y);
 }
 
 void handleBLECommand(const char* json) {
@@ -141,9 +171,51 @@ void handleBLECommand(const char* json) {
 
 class PetServerCallbacks : public BLEServerCallbacks {
     void onConnect(BLEServer* s) override {
-        bleConnected = true;
-        Serial.println("BLE connected");
+        Serial.println("BLE connecting...");
+
+        Preferences p;
+        bool previouslyAuthorized = false;
+        if (p.begin("cursorpet", true)) {
+            previouslyAuthorized = p.getBool("authorized", false);
+            p.end();
+        }
+        if (previouslyAuthorized) {
+            bleConnected = true;
+            Serial.println("Previously authorized - accepted");
+            return;
+        }
+
+        drawAuthScreen("New Device");
+        authPending = true;
+        authAccepted = false;
+        authRejected = false;
+
+        uint32_t start = millis();
+        while (millis() - start < 20000) {
+            delay(50);
+            if (authAccepted) {
+                Preferences p2;
+                p2.begin("cursorpet", false);
+                p2.putBool("authorized", true);
+                p2.end();
+                bleConnected = true;
+                authPending = false;
+                Serial.println("Auth accepted");
+                return;
+            }
+            if (authRejected) {
+                authPending = false;
+                Serial.println("Auth rejected - disconnecting");
+                s->disconnect(0);
+                return;
+            }
+        }
+
+        authPending = false;
+        Serial.println("Auth timeout - disconnecting");
+        s->disconnect(0);
     }
+
     void onDisconnect(BLEServer* s) override {
         bleConnected = false;
         pet.setState(PET_SLEEP);
@@ -233,6 +305,14 @@ static void checkStreak(int today) {
     settingsSave();
 }
 
+void clearAllAuthorizations() {
+    Preferences p;
+    p.begin("cursorpet", false);
+    p.remove("authorized");
+    p.end();
+    Serial.println("Authorization cleared");
+}
+
 static bool imuOk = false;
 static float accelX = 0, accelY = 0, accelZ = 0;
 static uint32_t lastShakeMs = 0;
@@ -288,6 +368,38 @@ void setup() {
 
 void loop() {
     readButtons();
+
+    if (authPending) {
+        if (digitalRead(BTN_A_PIN) == LOW) {
+            delay(30);
+            if (digitalRead(BTN_A_PIN) == LOW) {
+                authAccepted = true;
+                lcd->fillScreen(TFT_BLACK);
+                lcd->setTextColor(0x07E0, TFT_BLACK);
+                lcd->setTextDatum(MC_DATUM);
+                lcd->setTextSize(2);
+                lcd->drawString("Accepted!", LCD_WIDTH / 2, LCD_HEIGHT / 2);
+                delay(800);
+                currentMode = MODE_PET;
+            }
+        }
+        if (digitalRead(BTN_B_PIN) == LOW) {
+            delay(30);
+            if (digitalRead(BTN_B_PIN) == LOW) {
+                authRejected = true;
+                lcd->fillScreen(TFT_BLACK);
+                lcd->setTextColor(0xF800, TFT_BLACK);
+                lcd->setTextDatum(MC_DATUM);
+                lcd->setTextSize(2);
+                lcd->drawString("Rejected", LCD_WIDTH / 2, LCD_HEIGHT / 2);
+                delay(800);
+                currentMode = MODE_PET;
+            }
+        }
+        delay(30);
+        return;
+    }
+
     readIMU();
     checkShake();
     delay(10);
@@ -297,10 +409,12 @@ void loop() {
         if (held >= LONG_PRESS_MS) {
             settingsResetGrowth();
             pet.setGrowthData(0, 0);
+            clearAllAuthorizations();
+            Serial.println("Factory reset: growth + auth cleared");
             lcd->fillScreen(TFT_BLACK);
             lcd->setTextColor(0xF800, TFT_BLACK);
             lcd->setTextDatum(MC_DATUM);
-            lcd->drawString("Growth Reset", LCD_WIDTH / 2, LCD_HEIGHT / 2);
+            lcd->drawString("Factory Reset", LCD_WIDTH / 2, LCD_HEIGHT / 2);
             delay(1500);
             currentMode = MODE_PET;
         } else {
