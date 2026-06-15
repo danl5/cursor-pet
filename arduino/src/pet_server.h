@@ -17,4 +17,8 @@ private:
     void _handleStats();
     void _handleHealth();
     void _handleRoot();
+    void _handleConfigPage();
+    void _handleConfigGet();
+    void _handleConfigSave();
+    void _handleReboot();
 };

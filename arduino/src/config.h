@@ -1,9 +1,5 @@
 #pragma once
 
-// WiFi Configuration
-#define WIFI_SSID     "Zero"
-#define WIFI_PASSWORD "lnc.2019"
-
 // HTTP Server
 #define HTTP_PORT     80
 

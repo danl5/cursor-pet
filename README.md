@@ -8,6 +8,15 @@ A pixel pet companion for your Cursor AI coding sessions, running on M5Stack Sti
 - **Procedurally generated** — no image files needed, all animation is drawn in code
 - **Double-buffered rendering** — zero flicker via TFT_eSprite
 - **WiFi controlled**: Cursor hooks POST state changes over HTTP
+- **Easy WiFi setup**: AP mode with web config page, no code changes needed
+
+## Controls
+
+| Button | Action |
+|--------|--------|
+| **B** (short press) | Toggle between Pet and Settings screen |
+| **B** (long press, 1s) | Enter AP mode for WiFi configuration |
+| **A** | Return to Pet from Settings screen |
 
 ## Hardware
 
@@ -40,14 +49,21 @@ You should see the pet animation on the LCD and WiFi connection logs in the seri
 
 ## WiFi Configuration
 
-Edit `arduino/src/config.h` before building:
+The device stores WiFi credentials in NVS (flash memory). On first boot or when no config is saved, it enters **AP mode** automatically.
 
-```cpp
-#define WIFI_SSID     "your-wifi-name"
-#define WIFI_PASSWORD "your-wifi-password"
-```
+### First-time setup
 
-The device auto-selects the strongest AP when multiple networks share the same SSID.
+1. Power on the device — it creates a WiFi hotspot `CursorPet-Setup` (password: `12345678`)
+2. Connect your phone to this hotspot
+3. Open `http://192.168.4.1` in a browser
+4. Enter your WiFi SSID and password, tap **Save & Reboot**
+5. Device reboots and connects to your WiFi
+
+### Changing WiFi later
+
+- **Long press B button** (1 second) → enters AP mode for reconfiguration
+- **Short press B button** → toggles between Pet and Settings screen (shows WiFi status, IP, etc.)
+- **Press A button** → returns to Pet from Settings screen
 
 ## Cursor Hooks Setup
 
@@ -105,6 +121,10 @@ Cursor Agent
 |----------|--------|------|-------------|
 | `/api/state` | POST | `{"state":"idle\|thinking\|working"}` | Set pet state |
 | `/api/stats` | POST | `{"tokens":N,"tasks":N,"errors":N}` | Update stats |
+| `/api/config` | GET | — | Get WiFi status and config |
+| `/api/config` | POST | `{"ssid":"...","password":"..."}` | Save WiFi config & reboot |
+| `/api/reboot` | POST | — | Reboot device |
+| `/config` | GET | — | Web config page (open in browser) |
 | `/health` | GET | — | Health check |
 
 ### Example
@@ -138,10 +158,11 @@ cursor-pet/
 ├── arduino/
 │   ├── platformio.ini        # PlatformIO build config
 │   └── src/
-│       ├── config.h          # WiFi credentials, pin config
-│       ├── main.cpp          # Entry point, WiFi, HTTP server
+│       ├── config.h          # Display/pet constants
+│       ├── settings.h        # NVS settings (WiFi config)
+│       ├── main.cpp          # Entry point, WiFi, AP mode, buttons
 │       ├── pet.h / pet.cpp   # Pixel cat renderer (TFT_eSprite)
-│       └── server.h / server.cpp  # HTTP server, JSON parsing
+│       └── server.h / server.cpp  # HTTP server, config page, JSON API
 ├── hooks/
 │   ├── hooks.json            # Cursor hook configuration
 │   ├── notify.sh             # State notification script
@@ -154,6 +175,7 @@ cursor-pet/
 | Problem | Solution |
 |---------|----------|
 | LCD not displaying | Check USB connection, re-run `pio run -t upload` |
-| WiFi connection fails | Verify SSID/password in `config.h`, check 2.4GHz band |
+| WiFi connection fails | Long press B to enter AP mode, reconfigure via `192.168.4.1` |
 | Pet not responding to Cursor | Verify `CURSOR_PET_IP` env var, test with `curl /health` |
 | Flickering | Should not happen with TFT_eSprite; check if using correct firmware |
+| Want to reset WiFi | Long press B to enter AP mode, or flash with `pio run -t erase && pio run -t upload` |

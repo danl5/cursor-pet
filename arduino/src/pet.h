@@ -1,6 +1,6 @@
 #pragma once
-#include <M5Unified.h>
-#include <TFT_eSPI.h>
+#include <Arduino.h>
+#include <M5GFX.h>
 
 // Pet states
 enum PetState {
@@ -13,20 +13,21 @@ enum PetState {
 
 class PixelPet {
 public:
-    PixelPet(TFT_eSPI& lcd);
-    void begin();
+    PixelPet();
+    void begin(LovyanGFX* display);
     void setState(PetState s);
     void setStats(int tokens, int tasks, int errors);
+    void setBattery(int pct);
     void tick();
 
 private:
-    TFT_eSPI& _lcd;
-    TFT_eSprite _sprite;
+    M5Canvas* _sprite = nullptr;
     PetState _state;
     PetState _lastState;
     uint32_t _frame;
     uint32_t _lastTick;
     int _tokens, _tasks, _errors;
+    int _battery;
 
     void _drawHud();
     void _drawSleep();
