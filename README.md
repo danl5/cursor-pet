@@ -1,26 +1,30 @@
 # Cursor Pet
 
-A pixel pet companion for your Cursor AI coding sessions, running on M5Stack StickS3.
+A pixel pet companion for your Cursor AI coding sessions, running on M5Stack StickS3. Communicates wirelessly via BLE — no WiFi, no IP, no config. Just pair once and it works.
 
 ## Features
 
-- **3 states with real-time animations**: Idle (blinking), Thinking (thought bubbles), Working (green glow)
-- **Procedurally generated** — no image files needed, all animation is drawn in code
-- **Double-buffered rendering** — zero flicker via M5Canvas (M5GFX sprite)
-- **WiFi controlled**: Cursor hooks POST state changes over HTTP
-- **Easy WiFi setup**: AP mode with web config page, no code changes needed
+- **5 reactive states**: Sleep, Idle, Thinking, Working, Error — all with pixel-art animations
+- **Activity heatmap**: bottom-screen bars track thoughts (blue), tool calls (green), and session activity (yellow)
+- **Coding streak**: daily count with celebrations at 7, 30, 100, 365 days. Positive-only, no punishment for breaks.
+- **Shake interaction**: shake the device → cat wobbles (@_@). Uses built-in BMI270 IMU.
+- **BLE communication**: Nordic UART Service (NUS). Zero WiFi configuration, zero network dependency.
+- **Per-device authorization**: first connection requires A-button confirmation. Authorized devices are remembered.
+- **Growth system**: Baby → Kitten → Adult → Wizard as tasks accumulate
+- **6 idle behaviors**: stretch, yawn, tail chase, face wipe, look around, ear flop — randomly triggered
 
 ## Controls
 
 | Button | Action |
 |--------|--------|
-| **B** (short press) | Toggle between Pet and Settings screen |
-| **B** (long press, 1s) | Enter AP mode for WiFi configuration |
 | **A** | Return to Pet from Settings screen |
+| **B** (short press) | Toggle between Pet and Settings screen |
+| **B** (long press, 1s) | Factory reset (clear growth data + authorization) |
+| **Shake** | Startle the pet (dizzy animation) |
 
 ## Hardware
 
-- M5Stack StickS3 (ESP32-S3, 135x240 LCD)
+- M5Stack StickS3 (ESP32-S3, 135x240 LCD, BMI270 IMU, BM8563 RTC)
 
 ## Prerequisites
 
@@ -30,153 +34,150 @@ A pixel pet companion for your Cursor AI coding sessions, running on M5Stack Sti
 pip install platformio
 ```
 
-2. Connect StickS3 to your computer via USB cable.
+2. Install Python BLE library:
+
+```bash
+pip install bleak
+```
 
 ## Build & Flash
+
+Connect StickS3 via USB, then:
 
 ```bash
 cd arduino
 pio run -t upload
 ```
 
-Open Serial Monitor to verify:
+View serial output:
 
 ```bash
 pio device monitor
 ```
 
-You should see the pet animation on the LCD and WiFi connection logs in the serial output.
+You should see `BMI270 ready`, `BLE advertising as CursorPet`, and the pet animation on the LCD.
 
-## WiFi Configuration
+## Setup
 
-The device stores WiFi credentials in NVS (flash memory). On first boot or when no config is saved, it enters **AP mode** automatically.
-
-### First-time setup
-
-1. Power on the device — it creates a WiFi hotspot `CursorPet-Setup` (password: `12345678`)
-2. Connect your phone to this hotspot
-3. Open `http://192.168.4.1` in a browser
-4. Enter your WiFi SSID and password, tap **Save & Reboot**
-5. Device reboots and connects to your WiFi
-
-### Changing WiFi later
-
-- **Long press B button** (1 second) → enters AP mode for reconfiguration
-- **Short press B button** → toggles between Pet and Settings screen (shows WiFi status, IP, etc.)
-- **Press A button** → returns to Pet from Settings screen
-
-## Cursor Hooks Setup
-
-### Step 1: Copy hooks to your project
+### Step 1: Pair the device (one-time)
 
 ```bash
-# In your project directory
+# In your Cursor project directory
 mkdir -p .cursor/hooks
+cp /path/to/cursor-pet/hooks/pair.py .cursor/hooks/
+chmod +x .cursor/hooks/pair.py
+python3 .cursor/hooks/pair.py
+```
+
+1. The script scans for `CursorPet` over BLE
+2. The StickS3 screen shows **"Allow Connection?"**
+3. **Press A** on the StickS3 to authorize
+4. The device is now paired — this PC is remembered permanently
+
+To reset authorization, long-press B on the device.
+
+### Step 2: Install Cursor hooks
+
+```bash
 cp /path/to/cursor-pet/hooks/hooks.json .cursor/
+cp /path/to/cursor-pet/hooks/notify_ble.py .cursor/hooks/
 cp /path/to/cursor-pet/hooks/notify.sh .cursor/hooks/
-cp /path/to/cursor-pet/hooks/on_error.sh .cursor/hooks/
-chmod +x .cursor/hooks/*.sh
+chmod +x .cursor/hooks/notify_ble.py .cursor/hooks/notify.sh
 ```
 
-### Step 2: Set the device IP
+No environment variables needed. No IP to configure.
 
-Add to your shell profile (`~/.zshrc` or `~/.bashrc`):
+### Step 3: Test
+
+Open Cursor, ask the AI anything. The pet should react in real-time. Or test manually:
 
 ```bash
-export CURSOR_PET_IP="192.168.x.x"
+python3 .cursor/hooks/notify_ble.py thinking
+python3 .cursor/hooks/notify_ble.py idle
 ```
-
-Find your StickS3's IP from the Serial Monitor output.
-
-### Step 3: Test the connection
-
-```bash
-curl http://192.168.x.x/health
-```
-
-Should return `{"status":"ok"}`.
 
 ## How It Works
 
 ```
 Cursor Agent
     │
-    ├── sessionStart     ──→ notify.sh reset   (idle + zero counters)
-    ├── afterAgentThought ──→ notify.sh thinking
-    ├── preToolUse        ──→ notify.sh working
-    ├── postToolUse       ──→ notify.sh working
-    ├── stop              ──→ notify.sh idle
-    └── postToolUseFailure ──→ on_error.sh
+    ├── sessionStart        ──→ notify.sh reset    (idle + zero counters)
+    ├── afterAgentThought   ──→ notify.sh thinking (state + activity)
+    ├── preToolUse          ──→ notify.sh working   (state + activity)
+    ├── postToolUse         ──→ notify.sh working
+    ├── stop                ──→ notify.sh idle
+    └── postToolUseFailure  ──→ on_error.sh error
                                     │
                                     ▼
-                            StickS3 HTTP Server
+                          notify_ble.py (Python BLE client)
+                                    │
+                              BLE (Nordic UART)
+                                    │
+                                    ▼
+                            StickS3 BLE Server
                                     │
                                     ▼
                             Pixel Pet Animation
 ```
 
-## API
+## BLE Protocol
 
-| Endpoint | Method | Body | Description |
-|----------|--------|------|-------------|
-| `/api/state` | POST | `{"state":"idle\|thinking\|working"}` | Set pet state |
-| `/api/stats` | POST | `{"tokens":N,"tasks":N,"errors":N}` | Set counters to absolute values (used by `sessionStart` to reset) |
-| `/api/config` | GET | — | Get WiFi status and config |
-| `/api/config` | POST | `{"ssid":"...","password":"..."}` | Save WiFi config & reboot |
-| `/api/reboot` | POST | — | Reboot device |
-| `/config` | GET | — | Web config page (open in browser) |
-| `/health` | GET | — | Health check |
+Device advertises as `CursorPet`. Uses Nordic UART Service (NUS):
 
-### Example
+| Characteristic | UUID | Direction |
+|---------------|------|-----------|
+| TX | `6E400003-B5A3-F393-E0A9-E50E24DCCA9E` | Device → Host (notify) |
+| RX | `6E400002-B5A3-F393-E0A9-E50E24DCCA9E` | Host → Device (write) |
 
-```bash
-# Set state to working
-curl -X POST http://192.168.x.x/api/state \
-  -H "Content-Type: application/json" \
-  -d '{"state":"working"}'
+Commands are JSON written to the RX characteristic:
 
-# Update stats
-curl -X POST http://192.168.x.x/api/stats \
-  -H "Content-Type: application/json" \
-  -d '{"tokens":1234,"tasks":5,"errors":0}'
+```json
+{"state": "thinking", "thoughts": 1}
+{"state": "working", "tools": 1}
+{"state": "idle"}
+{"state": "error"}
+{"state": "idle", "tokens": 0, "tasks": 0, "errors": 0}
 ```
-
-### HUD counters (`T` / `F` / `E`)
-
-The bottom of the pet screen shows three running totals for the current session:
-
-- **`F` (tasks)** — auto-incremented on the device each time the pet enters the **Working** state (i.e. once per tool-use burst). No hook needed.
-- **`E` (errors)** — auto-incremented on the device each time it enters the **Error** state (driven by `postToolUseFailure`).
-- **`T` (tokens)** — not tracked automatically (hooks don't expose token counts); stays `0` unless you set it manually via `POST /api/stats`.
-
-Counters are zeroed at `sessionStart` (via `notify.sh reset`) and otherwise persist until reboot.
 
 ## Pet States
 
 | State | Animation | Trigger |
 |-------|-----------|---------|
-| Sleep | Eyes closed, floating zzz | No active session |
-| Idle | Blinking, cheek blush, tail wag | Session connected, nothing running |
+| Sleep | Eyes closed, floating zzz, drooped ears | No active session, BLE disconnected |
+| Idle | Blinking, cheek blush, tail wag, random behaviors | Session connected, nothing running |
 | Thinking | Looking up, blue thought bubbles | Agent is reasoning |
 | Working | Green glow ring, bouncing paws | Tool execution in progress |
-| Error | Red flash, X eyes | Tool failure |
+| Error | Red flash, X eyes, frowning | Tool failure |
+| Shake | Wobbling with @_@ face | Device shaken (BMI270 IMU) |
+| Celebrate | Sparkle particles + message | Task milestone or streak achievement |
+
+## HUD
+
+The pet screen shows:
+
+- **Top bar**: battery %, state label, growth stage (Baby/Kitten/Adult/Wizard)
+- **Bottom bar**: `T:tokens F:tasks E:errors` + streak day counter (D7, D30, etc.)
+- **Activity bars** (bottom edge): blue=thoughts, green=tool calls, yellow=combined activity
+- **Settings screen** (press B): BLE status, device name, battery, streak, tasks, growth stage
 
 ## Project Structure
 
 ```
 cursor-pet/
 ├── arduino/
-│   ├── platformio.ini        # PlatformIO build config
+│   ├── platformio.ini       # PlatformIO build config
 │   └── src/
-│       ├── config.h                    # Display/pet constants
-│       ├── settings.h / settings.cpp   # NVS settings (WiFi config)
-│       ├── main.cpp                    # Entry point, WiFi, AP mode, buttons
-│       ├── pet.h / pet.cpp             # Pixel cat renderer (M5Canvas sprite)
-│       └── pet_server.h / pet_server.cpp  # HTTP server, config page, JSON API
+│       ├── config.h                   # Display/pet/ble constants
+│       ├── settings.h / settings.cpp  # NVS settings (growth, streak)
+│       ├── sprites.h                  # Pixel art sprite data (16x16 cat)
+│       ├── main.cpp                   # Entry point, BLE server, buttons, IMU
+│       └── pet.h / pet.cpp            # Pixel cat renderer + state machine
 ├── hooks/
-│   ├── hooks.json            # Cursor hook configuration
-│   ├── notify.sh             # State notification script
-│   └── on_error.sh           # Error handler script
+│   ├── hooks.json           # Cursor hook configuration
+│   ├── pair.py              # One-time BLE pairing script
+│   ├── notify_ble.py        # BLE notification client (main hook)
+│   ├── notify.sh            # Hook wrapper → notify_ble.py
+│   └── on_error.sh          # Error handler → notify_ble.py error
 └── README.md
 ```
 
@@ -185,7 +186,9 @@ cursor-pet/
 | Problem | Solution |
 |---------|----------|
 | LCD not displaying | Check USB connection, re-run `pio run -t upload` |
-| WiFi connection fails | Long press B to enter AP mode, reconfigure via `192.168.4.1` |
-| Pet not responding to Cursor | Verify `CURSOR_PET_IP` env var, test with `curl /health` |
-| Flickering | Should not happen with M5Canvas double buffering; check if using correct firmware |
-| Want to reset WiFi | Long press B to enter AP mode, or flash with `pio run -t erase && pio run -t upload` |
+| BLE device not found | Make sure StickS3 shows pet on screen (not blank). Reboot if needed. |
+| Pairing timeout | Press A on the device within 20 seconds of running `pair.py`. If missed, run it again. |
+| Pet not reacting to Cursor | Run `python3 pair.py` to re-authorize. Check serial output for errors. |
+| Want to reset everything | Long-press B (1s) — clears growth data and authorization. Re-pair after reset. |
+| BLE disconnected randomly | Normal BLE behavior — the pet goes to Sleep state until next hook fires. Hooks auto-reconnect. |
+| Shake not working | BMI270 IMU may not be initialized. Check serial output for "BMI270 ready". |
