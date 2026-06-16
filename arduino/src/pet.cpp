@@ -1,7 +1,6 @@
 #include "pet.h"
 #include "config.h"
 #include "sprites.h"
-#include <M5Unified.h>
 
 #define C_BG       0x0000
 #define C_HUD_BG   0x10A2
@@ -33,9 +32,8 @@ void PixelPet::begin(LovyanGFX* display) {
 
 void PixelPet::setState(PetState s) {
     if (s != _state) {
-        if (s == PET_WORKING)      { _tasks++; M5.Speaker.tone(880, 80); }
-        else if (s == PET_ERROR)   { _errors++; M5.Speaker.tone(220, 300); }
-        else if (s == PET_THINKING) { M5.Speaker.tone(1760, 50); delay(50); M5.Speaker.tone(880, 50); }
+        if (s == PET_WORKING)      _tasks++;
+        else if (s == PET_ERROR)   _errors++;
         if (s != PET_IDLE && _state == PET_IDLE) {
             _idleBehavior = IDLE_NONE;
             _idleBehaviorTimer = 0;
@@ -155,9 +153,6 @@ void PixelPet::tick() {
         _confettiOffset = 0;
         _celebrateReason[0] = '\0';
         _frame = 0;
-        M5.Speaker.tone(1047, 100); delay(80);
-        M5.Speaker.tone(1319, 100); delay(80);
-        M5.Speaker.tone(1568, 150);
         return;
     }
 
