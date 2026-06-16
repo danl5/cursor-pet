@@ -264,9 +264,8 @@ void setupBLE() {
 
     BLEAdvertising* adv = BLEDevice::getAdvertising();
     adv->addServiceUUID(SERVICE_UUID);
-    adv->setScanResponse(true);
-    adv->setMinPreferred(0x06);
-    adv->setMaxPreferred(0x12);
+    adv->setMinInterval(1600);
+    adv->setMaxInterval(3200);
 
     BLEDevice::startAdvertising();
     Serial.println("BLE advertising as " BLE_DEVICE_NAME);
@@ -480,8 +479,11 @@ void loop() {
             lastIdleCheck = millis();
             if (pet.getState() != PET_SLEEP) {
                 pet.setState(PET_SLEEP);
+                M5.Lcd.setBrightness(16);
             }
         }
+    } else {
+        M5.Lcd.setBrightness(128);
     }
 
     switch (currentMode) {
