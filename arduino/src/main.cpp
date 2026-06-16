@@ -412,7 +412,8 @@ void loop() {
 
     readIMU();
     checkShake();
-    delay(10);
+
+    readButtons();
 
     if (btnB_released) {
         uint32_t held = millis() - lastBPress;
@@ -450,7 +451,6 @@ void loop() {
         settingsSave();
     }
     btnA_pressed = false;
-    btnA_pressed = false;
 
     static uint32_t lastBatteryRead = 0;
     static int lastDayCheck = 0;
@@ -487,9 +487,13 @@ void loop() {
         case MODE_PET:
             pet.tick();
             break;
-        case MODE_STATUS:
-            drawStatusScreen();
-            delay(500);
+        case MODE_STATUS: {
+            static uint32_t lastStatus = 0;
+            if (millis() - lastStatus >= 500) {
+                lastStatus = millis();
+                drawStatusScreen();
+            }
             break;
+        }
     }
 }
