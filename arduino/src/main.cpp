@@ -357,6 +357,9 @@ void setup() {
     imuOk = M5.Imu.isEnabled();
     Serial.println(imuOk ? "BMI270 ready" : "IMU unavailable");
 
+    M5.Speaker.begin();
+    M5.Speaker.setVolume(64);
+
     lcd = &M5.Lcd;
     lcd->setRotation(0);
     lcd->fillScreen(TFT_BLACK);
