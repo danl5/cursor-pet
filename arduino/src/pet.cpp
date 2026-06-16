@@ -281,6 +281,24 @@ static const uint16_t* getSprite(PetState state, int growthStage, int charIndex,
             default:          return robot_idle_open;
         }
     }
+    if (charIndex == CHAR_MELON) {
+        scale = 4; sw = SPRITE_W; sh = SPRITE_H;
+        switch (state) {
+            case PET_SLEEP:   return melon_sleep;
+            case PET_THINKING: return melon_think;
+            case PET_ERROR:   return melon_error;
+            default:          return melon_idle_open;
+        }
+    }
+    if (charIndex == CHAR_SUN) {
+        scale = 4; sw = SPRITE_W; sh = SPRITE_H;
+        switch (state) {
+            case PET_SLEEP:   return sun_sleep;
+            case PET_THINKING: return sun_think;
+            case PET_ERROR:   return sun_error;
+            default:          return sun_idle_open;
+        }
+    }
 
     if (growthStage == GROWTH_BABY) {
         scale = 6; sw = BABY_W; sh = BABY_H;
@@ -324,7 +342,7 @@ void PixelPet::_drawIdle() {
 
     int scale, sw, sh;
     const uint16_t* sprite;
-    if (_charIndex == CHAR_ROBOT) {
+    if (_charIndex == CHAR_ROBOT || _charIndex == CHAR_MELON || _charIndex == CHAR_SUN) {
         scale = 4; sw = SPRITE_W; sh = SPRITE_H;
         bool eyesOpen;
         if (_idleBehavior == IDLE_YAWN) {
@@ -332,7 +350,12 @@ void PixelPet::_drawIdle() {
         } else {
             eyesOpen = (_frame % BLINK_INTERVAL) >= BLINK_DURATION;
         }
-        sprite = eyesOpen ? robot_idle_open : robot_idle_closed;
+        if (_charIndex == CHAR_ROBOT)
+            sprite = eyesOpen ? robot_idle_open : robot_idle_closed;
+        else if (_charIndex == CHAR_MELON)
+            sprite = eyesOpen ? melon_idle_open : melon_idle_closed;
+        else
+            sprite = eyesOpen ? sun_idle_open : sun_idle_closed;
     } else if (_growthStage == GROWTH_BABY) {
         scale = 6; sw = BABY_W; sh = BABY_H;
         sprite = cat_baby;
