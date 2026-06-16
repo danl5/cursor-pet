@@ -235,6 +235,18 @@ void handleBLECommand(const char* json) {
         pet.addActivity(thoughts, tools);
     }
 
+    const char* model = doc["model"] | "";
+    if (strlen(model) > 0) {
+        pet.setModel(model);
+    }
+
+    const char* tool = doc["tool"] | "";
+    if (strlen(tool) > 0) {
+        pet.setTool(tool);
+    } else if (state && strcmp(state, "idle") == 0) {
+        pet.setTool("");
+    }
+
     int tokens = doc["tokens"] | -1;
     int tasks = doc["tasks"] | -1;
     int errors = doc["errors"] | -1;

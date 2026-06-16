@@ -19,6 +19,8 @@ PixelPet::PixelPet()
       _celebrateTimer(0), _celebrateFrame(0),
       _idleBehavior(IDLE_NONE), _idleBehaviorTimer(0), _idleCooldown(0) {
     _celebrateReason[0] = '\0';
+    _modelName[0] = '\0';
+    _toolLabel[0] = '\0';
     _charIndex = 0;
 }
 
@@ -93,6 +95,16 @@ void PixelPet::setChar(int idx) {
     if (idx < 0) idx = 0;
     if (idx >= CHAR_COUNT) idx = CHAR_COUNT - 1;
     _charIndex = idx;
+}
+
+void PixelPet::setModel(const char* name) {
+    strncpy(_modelName, name, sizeof(_modelName) - 1);
+    _modelName[sizeof(_modelName) - 1] = '\0';
+}
+
+void PixelPet::setTool(const char* name) {
+    strncpy(_toolLabel, name, sizeof(_toolLabel) - 1);
+    _toolLabel[sizeof(_toolLabel) - 1] = '\0';
 }
 
 void PixelPet::nextChar() {
@@ -222,7 +234,13 @@ void PixelPet::_drawHud() {
     _sprite->setTextSize(1);
     const char* labels[] = {"Sleep", "Idle", "Think", "Work", "ERROR", "?!", "*"};
     int labelIdx = (_state <= PET_ERROR) ? _state : PET_IDLE;
-    _sprite->drawString(labels[labelIdx], LCD_WIDTH / 2, 4);
+    if (_toolLabel[0] && _state == PET_WORKING) {
+        char buf[32];
+        snprintf(buf, sizeof(buf), "%s", _toolLabel);
+        _sprite->drawString(buf, LCD_WIDTH / 2, 4);
+    } else {
+        _sprite->drawString(labels[labelIdx], LCD_WIDTH / 2, 4);
+    }
 
     const char* stages[] = {"Baby", "Kitten", "Adult", "Wizard"};
     _sprite->setTextDatum(TR_DATUM);
@@ -253,6 +271,12 @@ void PixelPet::_drawHud() {
         _sprite->setTextDatum(TR_DATUM);
         _sprite->setTextColor(0xFEA0, C_BG);
         _sprite->drawString(sbuf, LCD_WIDTH - 4, 214);
+    }
+
+    if (_modelName[0]) {
+        _sprite->setTextDatum(BC_DATUM);
+        _sprite->setTextColor(0x4208, C_BG);
+        _sprite->drawString(_modelName, LCD_WIDTH / 2, 206);
     }
 
     int barY = 226;

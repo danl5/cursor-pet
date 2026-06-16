@@ -52,6 +52,8 @@ public:
     void setStats(int tokens, int tasks, int errors);
     void setBattery(int pct);
     void setGrowthData(int totalTasks, int stage);
+    void setModel(const char* name);
+    void setTool(const char* name);
     void addActivity(int thoughts, int tools);
     void triggerShake();
     void triggerCelebrate(const char* reason);
@@ -90,6 +92,8 @@ private:
     int _celebrateTimer;
     int _celebrateFrame;
     char _celebrateReason[32];
+    char _modelName[32];
+    char _toolLabel[16];
 
     IdleBehavior _idleBehavior;
     int _idleBehaviorTimer;

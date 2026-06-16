@@ -13,12 +13,12 @@
     ],
     "afterAgentThought": [
       {
-        "command": ".cursor/hooks/notify_ble.py thinking"
+        "command": ".cursor/hooks/hook_parse.sh thinking"
       }
     ],
     "preToolUse": [
       {
-        "command": ".cursor/hooks/notify_ble.py working"
+        "command": ".cursor/hooks/hook_parse.sh working"
       }
     ],
     "postToolUse": [
