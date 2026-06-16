@@ -139,26 +139,85 @@ Commands are JSON written to the RX characteristic:
 {"state": "idle", "tokens": 0, "tasks": 0, "errors": 0}
 ```
 
-## Pet States
+## Pet States & Animations
 
-| State | Animation | Trigger |
-|-------|-----------|---------|
-| Sleep | Eyes closed, floating zzz, drooped ears | No active session, BLE disconnected |
-| Idle | Blinking, cheek blush, tail wag, random behaviors | Session connected, nothing running |
-| Thinking | Looking up, blue thought bubbles | Agent is reasoning |
-| Working | Green glow ring, bouncing paws | Tool execution in progress |
-| Error | Red flash, X eyes, frowning | Tool failure |
-| Shake | Wobbling with @_@ face | Device shaken (BMI270 IMU) |
-| Celebrate | Sparkle particles + message | Task milestone or streak achievement |
+| State | Sprite | Animation | Trigger |
+|-------|--------|-----------|---------|
+| **Sleep** | Eyes closed, drooped ears | Floating zzz rising up, slow breathing | No active session or BLE disconnected (3s idle) |
+| **Idle** | Eyes open, pink cheek blush | Blinking every 30 frames, tail wagging | Session started, no action |
+| **Idle: Stretch** | Eyes occasionally closed | Cat bounces up/leans back, paws extend | Random (3% per tick, after cooldown) |
+| **Idle: Yawn** | Eyes closed | Mouth opens/forms pink ellipse, then closes | Random |
+| **Idle: Tail Chase** | Eyes open | Cat wiggles left/right, tail whips fast | Random |
+| **Idle: Face Wipe** | Eyes open, paw on face | Paw slides across cheek area | Random |
+| **Idle: Look Around** | Eyes open | Cat shifts gaze left → center → right | Random |
+| **Idle: Ear Flop** | Eyes open | Ears twitch up/down | Random |
+| **Thinking** | Eyes looking up | Blue thought bubbles (3 circles rising/floating) | `afterAgentThought` hook |
+| **Working** | Eyes open | Green glow ring (2 ellipses pulsing), cat bouncing, paws appear | `preToolUse` / `postToolUse` hook |
+| **Error** | X eyes on red-tinted body, frowning | Alternates between error face and normal face (blinking red) | `postToolUseFailure` hook |
+| **Shake** | Eyes open, wobbling | Cat shakes with sin/cos oscillation. `!` text above → `@_@` dizzy face → returns. White squiggle lines on dizzy. | Shake device (BMI270 > 2g threshold, 2s cooldown) |
+| **Celebrate** | Eyes open, bouncing | 8 colorful sparkle particles rotate outward, "Done!" or streak message below. For streak celebrations: shows reason text ("7 Day Streak!") | Task complete or streak milestone |
 
-## HUD
+## Screen Layout
 
-The pet screen shows:
+```
+┌─────────────────────────────┐  ← 0px   (135×28 dark-teal bar)
+│ 85%        Idle       Kitten│          battery │ state │ growth stage
+├─────────────────────────────┤  ← 28px
+│                             │
+│                             │
+│         ◆       ◆           │  ← eyes (black with white highlight)
+│      ■           ■          │  ← pink cheeks (FE19)
+│      ■    ■     ■           │  ← mouth ω (pink) + nose (black)
+│                             │
+│     [cat sprite 96×96]      │  184px pet area (black background)
+│      + state animation      │     • Sleep: zzz floating
+│      + idle behavior        │     • Idle: tail wagging line
+│                             │     • Thinking: blue bubbles
+│                             │     • Working: green glow rings
+│                             │     • Error: red flash alternating
+│                             │
+├─────────────────────────────┤  ← 212px (135×28 black footer)
+│ T:0  F:3  E:0          D3   │  stats left │ streak day right
+│ ██████████████████████████  │  ← thin color bars (4px tall)
+│ ████░░░░░█████░░░░░█████░░  │  blue=thoughts  green=tools  yellow=activity
+└─────────────────────────────┘  ← 240px
+```
 
-- **Top bar**: battery %, state label, growth stage (Baby/Kitten/Adult/Wizard)
-- **Bottom bar**: `T:tokens F:tasks E:errors` + streak day counter (D7, D30, etc.)
-- **Activity bars** (bottom edge): blue=thoughts, green=tool calls, yellow=combined activity
-- **Settings screen** (press B): BLE status, device name, battery, streak, tasks, growth stage
+### Top bar explained
+
+| Position | Content | Color |
+|----------|---------|-------|
+| Left | Battery percentage (e.g. `85%`) | White |
+| Center | State label: Sleep / Idle / Think / Work / ERROR | White |
+| Right | Growth stage: Baby / Kitten / Adult / Wizard | Yellow `0xFEA0` |
+
+### Pet area explained
+
+The cat is a 16×16 pixel sprite drawn at 4× scale (64×64) or 6× scale for Baby stage (96×96 from 8×8). Color palette:
+
+| Color | Hex | Used for |
+|-------|-----|----------|
+| Yellow | `FEA0` | Body, ears, face |
+| Dark Yellow | `C580` | Shading |
+| Orange | `FBE0` | Inner ears, accents |
+| Pink | `FE19` | Cheeks (2 dots), mouth ω (3 dots) |
+| Black | `0000` | Eyes, nose, background |
+| White | `FFFF` | Eye highlights |
+| Red | `F800` | Error body tint |
+
+The mouth is a classic ω (w-shaped cat smile) made of 3 pink pixels forming a wide smile curve, with the black nose pixel centered above it.
+
+### Bottom footer explained
+
+| Position | Content | Description |
+|----------|---------|-------------|
+| Left | `T:0 F:3 E:0` | T=tokens, F=tool calls, E=errors (in-session counters) |
+| Right | `D7` | Streak day count (appears when > 0). 7, 30, 100, 365 trigger celebrations. |
+| Bottom bars | blue / green / yellow | Activity heatmap: blue=thought count, green=tool call count, yellow=combined session activity. Bars grow proportionally, max at 20 events. |
+
+### Settings screen (short B press)
+
+Shows BLE status, device name, battery, streak days, total tasks, growth stage. Long-press B to factory reset (clears growth + authorization).
 
 ## Project Structure
 
