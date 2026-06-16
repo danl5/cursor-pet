@@ -1,73 +1,33 @@
 #!/usr/bin/env python3
 """
-Cursor Pet BLE bridge.
-Sends hook events to the CursorPet BLE device via Nordic UART Service.
+Send a command to the CursorPet BLE daemon via Unix socket.
 
-Usage:
-  notify_ble.py <action>
+Usage: same as before, e.g.:
   notify_ble.py thinking
-  notify_ble.py working
   notify_ble.py idle
-  notify_ble.py reset
-  notify_ble.py error
-
-Prerequisites:
-  pip install bleak
+  notify_ble.py '{"state":"working","tools":1}'
 """
 
-import asyncio
 import json
+import socket
 import sys
 import os
 
-DEVICE_NAME = "CursorPet"
-SERVICE_UUID = "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"
-RX_CHAR_UUID = "6E400002-B5A3-F393-E0A9-E50E24DCCA9E"
-
-
-async def send_command(data: dict, timeout: float = 5.0) -> bool:
-    try:
-        from bleak import BleakScanner, BleakClient
-    except ImportError:
-        print("bleak not installed. Run: pip install bleak", file=sys.stderr)
-        return False
-
-    device = await BleakScanner.find_device_by_name(
-        DEVICE_NAME, timeout=timeout
-    )
-
-    if not device:
-        print(f"Device '{DEVICE_NAME}' not found", file=sys.stderr)
-        return False
-
-    try:
-        async with BleakClient(device, timeout=timeout) as client:
-            payload = json.dumps(data).encode()
-            await client.write_gatt_char(RX_CHAR_UUID, payload, response=True)
-            await asyncio.sleep(0.3)
-            return True
-    except Exception as e:
-        print(f"BLE write failed: {e}", file=sys.stderr)
-        return False
+SOCKET_PATH = "/tmp/cursorpet.sock"
 
 
 def main():
     action = sys.argv[1] if len(sys.argv) > 1 else "idle"
 
     data = {}
-
     if action == "reset":
         data = {"state": "idle", "tokens": 0, "tasks": 0, "errors": 0}
     elif action == "thinking":
         data = {"state": "thinking", "thoughts": 1}
     elif action == "working":
         data = {"state": "working", "tools": 1}
-    elif action == "idle":
-        data = {"state": "idle"}
-    elif action == "error":
-        data = {"state": "error"}
-    elif action == "sleep":
-        data = {"state": "sleep"}
+    elif action in ("idle", "error", "sleep"):
+        data = {"state": action}
     elif action.startswith("{"):
         try:
             data = json.loads(action)
@@ -78,8 +38,18 @@ def main():
         print(f"Unknown action: {action}", file=sys.stderr)
         sys.exit(1)
 
-    success = asyncio.run(send_command(data))
-    sys.exit(0 if success else 1)
+    payload = json.dumps(data)
+
+    try:
+        sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        sock.settimeout(2)
+        sock.connect(SOCKET_PATH)
+        sock.sendall(payload.encode())
+        sock.close()
+        sys.exit(0)
+    except Exception as e:
+        print(f"daemon unreachable: {e}", file=sys.stderr)
+        sys.exit(1)
 
 
 if __name__ == "__main__":
