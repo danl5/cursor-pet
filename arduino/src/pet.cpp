@@ -7,8 +7,8 @@
 #define C_WHITE    0xFFFF
 #define C_GRAY     0xC618
 
-#define BLINK_INTERVAL  30
-#define BLINK_DURATION  3
+#define BLINK_INTERVAL  12
+#define BLINK_DURATION  2
 
 PixelPet::PixelPet()
     : _state(PET_SLEEP), _lastState(PET_SLEEP),
@@ -77,7 +77,7 @@ void PixelPet::triggerShake() {
 void PixelPet::triggerCelebrate(const char* reason) {
     if (_celebrateTimer > 0) return;
     _lastState = _state;
-    _celebrateTimer = 24;
+    _celebrateTimer = 10;
     _celebrateFrame = 0;
     _confettiOffset = 0;
     strncpy(_celebrateReason, reason, sizeof(_celebrateReason) - 1);
@@ -111,7 +111,7 @@ void PixelPet::_updateGrowth() {
 
 void PixelPet::tick() {
     uint32_t now = millis();
-    if (now - _lastTick < 200) return;
+    if (now - _lastTick < 500) return;
     _lastTick = now;
 
     if (_celebrateTimer > 0) {
@@ -148,7 +148,7 @@ void PixelPet::tick() {
     if (_lastState == PET_WORKING && _state != PET_WORKING && _state != PET_SHAKE && _state != PET_SLEEP) {
         _totalTasks++;
         _updateGrowth();
-        _celebrateTimer = 15;
+        _celebrateTimer = 6;
         _celebrateFrame = 0;
         _confettiOffset = 0;
         _celebrateReason[0] = '\0';
