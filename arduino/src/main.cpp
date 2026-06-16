@@ -476,7 +476,7 @@ void loop() {
 
     if (!bleConnected) {
         static uint32_t lastIdleCheck = 0;
-        if (millis() - lastIdleCheck >= 3000) {
+        if (millis() - lastIdleCheck >= 10000) {
             lastIdleCheck = millis();
             if (pet.getState() != PET_SLEEP) {
                 pet.setState(PET_SLEEP);

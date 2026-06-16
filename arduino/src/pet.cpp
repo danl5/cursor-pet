@@ -145,7 +145,7 @@ void PixelPet::tick() {
         return;
     }
 
-    if (_lastState == PET_WORKING && _state != PET_WORKING && _state != PET_SHAKE) {
+    if (_lastState == PET_WORKING && _state != PET_WORKING && _state != PET_SHAKE && _state != PET_SLEEP) {
         _totalTasks++;
         _updateGrowth();
         _celebrateTimer = 15;
