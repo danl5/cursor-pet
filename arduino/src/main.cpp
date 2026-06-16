@@ -134,7 +134,9 @@ void drawStatusScreen() {
     y += lineH + 10;
 
     lcd->setTextColor(0x4208, TFT_BLACK);
-    lcd->drawString("A: Back to pet", 4, y);
+    lcd->drawString("A: Next character", 4, y);
+    y += lineH;
+    lcd->drawString("B: Back to pet", 4, y);
     y += lineH;
     lcd->drawString("Long B: Reset + clear auth", 4, y);
 }
@@ -269,6 +271,7 @@ void setupPet() {
     DeviceSettings& s = settingsGet();
     pet.setGrowthData(s.totalTasks, s.growthStage);
     pet.setStreak(s.streakCount, s.streakLastDay);
+    pet.setChar(s.charIndex);
 }
 
 static int todayYMD() {
@@ -435,8 +438,12 @@ void loop() {
     }
 
     if (btnA_pressed && currentMode == MODE_STATUS) {
-        currentMode = MODE_PET;
+        pet.nextChar();
+        DeviceSettings& s2 = settingsGet();
+        s2.charIndex = pet.getCharIndex();
+        settingsSave();
     }
+    btnA_pressed = false;
     btnA_pressed = false;
 
     static uint32_t lastBatteryRead = 0;

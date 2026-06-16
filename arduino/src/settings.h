@@ -9,6 +9,7 @@ struct DeviceSettings {
     int streakLastDay;
     int activityThoughts;
     int activityTools;
+    int charIndex;
 };
 
 void settingsLoad();

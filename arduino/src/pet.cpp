@@ -19,6 +19,7 @@ PixelPet::PixelPet()
       _celebrateTimer(0), _celebrateFrame(0),
       _idleBehavior(IDLE_NONE), _idleBehaviorTimer(0), _idleCooldown(0) {
     _celebrateReason[0] = '\0';
+    _charIndex = 0;
 }
 
 void PixelPet::begin(LovyanGFX* display) {
@@ -86,6 +87,16 @@ void PixelPet::triggerCelebrate(const char* reason) {
 void PixelPet::setStreak(int count, int today) {
     _streakCount = count;
     _streakDay = today;
+}
+
+void PixelPet::setChar(int idx) {
+    if (idx < 0) idx = 0;
+    if (idx >= CHAR_COUNT) idx = CHAR_COUNT - 1;
+    _charIndex = idx;
+}
+
+void PixelPet::nextChar() {
+    _charIndex = (_charIndex + 1) % CHAR_COUNT;
 }
 
 void PixelPet::_updateGrowth() {
@@ -216,7 +227,11 @@ void PixelPet::_drawHud() {
     const char* stages[] = {"Baby", "Kitten", "Adult", "Wizard"};
     _sprite->setTextDatum(TR_DATUM);
     _sprite->setTextColor(0xFEA0, C_HUD_BG);
-    _sprite->drawString(stages[_growthStage], LCD_WIDTH - 4, 4);
+    if (_charIndex == CHAR_CAT) {
+        _sprite->drawString(stages[_growthStage], LCD_WIDTH - 4, 4);
+    } else {
+        _sprite->drawString(charNames[_charIndex], LCD_WIDTH - 4, 4);
+    }
 
     _sprite->fillRect(0, 212, LCD_WIDTH, 28, C_BG);
     _sprite->setTextSize(1);
@@ -256,7 +271,17 @@ void PixelPet::_drawHud() {
     if (dur > 0) _sprite->fillRect(x3, barY, (barW * dur) / maxDur, barH, DURATION_COLOR);
 }
 
-static const uint16_t* getSprite(PetState state, int growthStage, int& scale, int& sw, int& sh) {
+static const uint16_t* getSprite(PetState state, int growthStage, int charIndex, int& scale, int& sw, int& sh) {
+    if (charIndex == CHAR_ROBOT) {
+        scale = 4; sw = SPRITE_W; sh = SPRITE_H;
+        switch (state) {
+            case PET_SLEEP:   return robot_sleep;
+            case PET_THINKING: return robot_think;
+            case PET_ERROR:   return robot_error;
+            default:          return robot_idle_open;
+        }
+    }
+
     if (growthStage == GROWTH_BABY) {
         scale = 6; sw = BABY_W; sh = BABY_H;
         return cat_baby;
@@ -279,7 +304,7 @@ static const uint16_t* getSprite(PetState state, int growthStage, int& scale, in
 
 void PixelPet::_drawSleep() {
     int scale, sw, sh;
-    const uint16_t* sprite = getSprite(PET_SLEEP, _growthStage, scale, sw, sh);
+    const uint16_t* sprite = getSprite(PET_SLEEP, _growthStage, _charIndex, scale, sw, sh);
     int x = (LCD_WIDTH - sw * scale) / 2;
     int y = 80;
 
@@ -299,7 +324,16 @@ void PixelPet::_drawIdle() {
 
     int scale, sw, sh;
     const uint16_t* sprite;
-    if (_growthStage == GROWTH_BABY) {
+    if (_charIndex == CHAR_ROBOT) {
+        scale = 4; sw = SPRITE_W; sh = SPRITE_H;
+        bool eyesOpen;
+        if (_idleBehavior == IDLE_YAWN) {
+            eyesOpen = false;
+        } else {
+            eyesOpen = (_frame % BLINK_INTERVAL) >= BLINK_DURATION;
+        }
+        sprite = eyesOpen ? robot_idle_open : robot_idle_closed;
+    } else if (_growthStage == GROWTH_BABY) {
         scale = 6; sw = BABY_W; sh = BABY_H;
         sprite = cat_baby;
     } else if (_growthStage == GROWTH_KITTEN) {
@@ -354,7 +388,7 @@ void PixelPet::_drawIdle() {
 
     drawSpriteToCanvas(_sprite, x, y, sprite, scale);
 
-    if (_growthStage >= GROWTH_ADULT && _idleBehavior != IDLE_YAWN) {
+    if (_charIndex != CHAR_ROBOT && _growthStage >= GROWTH_ADULT && _idleBehavior != IDLE_YAWN) {
         int tailX = x + sw * scale + 5;
         int tailY = y + 60;
         int tailWag;
@@ -415,7 +449,7 @@ void PixelPet::_drawIdle() {
 
 void PixelPet::_drawThink() {
     int scale, sw, sh;
-    const uint16_t* sprite = getSprite(PET_THINKING, _growthStage, scale, sw, sh);
+    const uint16_t* sprite = getSprite(PET_THINKING, _growthStage, _charIndex, scale, sw, sh);
     int x = (LCD_WIDTH - sw * scale) / 2;
     int y = 90;
 
@@ -429,7 +463,7 @@ void PixelPet::_drawThink() {
 
 void PixelPet::_drawWork() {
     int scale, sw, sh;
-    const uint16_t* sprite = getSprite(PET_WORKING, _growthStage, scale, sw, sh);
+    const uint16_t* sprite = getSprite(PET_WORKING, _growthStage, _charIndex, scale, sw, sh);
     int bounce = (_frame % 2 == 0) ? 4 : 0;
     int x = (LCD_WIDTH - sw * scale) / 2;
     int y = 80 + bounce;
@@ -448,7 +482,7 @@ void PixelPet::_drawWork() {
 
 void PixelPet::_drawError() {
     int scale, sw, sh;
-    const uint16_t* sprite = getSprite(PET_ERROR, _growthStage, scale, sw, sh);
+    const uint16_t* sprite = getSprite(PET_ERROR, _growthStage, _charIndex, scale, sw, sh);
     int x = (LCD_WIDTH - sw * scale) / 2;
     int y = 80;
 
@@ -461,7 +495,7 @@ void PixelPet::_drawError() {
 
 void PixelPet::_drawCelebrate() {
     int scale, sw, sh;
-    const uint16_t* sprite = getSprite(PET_IDLE, _growthStage, scale, sw, sh);
+    const uint16_t* sprite = getSprite(PET_IDLE, _growthStage, _charIndex, scale, sw, sh);
     int bounce = (_celebrateFrame % 2 == 0) ? -8 : 0;
     int x = (LCD_WIDTH - sw * scale) / 2;
     int y = 80 + bounce;
@@ -495,7 +529,7 @@ void PixelPet::_drawCelebrate() {
 
 void PixelPet::_drawShake() {
     int scale, sw, sh;
-    const uint16_t* sprite = getSprite(PET_IDLE, _growthStage, scale, sw, sh);
+    const uint16_t* sprite = getSprite(PET_IDLE, _growthStage, _charIndex, scale, sw, sh);
     int shakeX = (int)(sin(_shakeTimer * 1.2f) * 6);
     int shakeY = (int)(cos(_shakeTimer * 1.7f) * 4);
     int x = (LCD_WIDTH - sw * scale) / 2 + shakeX;

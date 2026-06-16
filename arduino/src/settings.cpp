@@ -11,6 +11,7 @@ void settingsLoad() {
     _deviceSettings.streakLastDay = _settingsPrefs.getInt("streak_day", 0);
     _deviceSettings.activityThoughts = _settingsPrefs.getInt("act_thought", 0);
     _deviceSettings.activityTools = _settingsPrefs.getInt("act_tools", 0);
+    _deviceSettings.charIndex = _settingsPrefs.getInt("char_index", 0);
     _settingsPrefs.end();
 }
 
@@ -22,6 +23,7 @@ void settingsSave() {
     _settingsPrefs.putInt("streak_day", _deviceSettings.streakLastDay);
     _settingsPrefs.putInt("act_thought", _deviceSettings.activityThoughts);
     _settingsPrefs.putInt("act_tools", _deviceSettings.activityTools);
+    _settingsPrefs.putInt("char_index", _deviceSettings.charIndex);
     _settingsPrefs.end();
 }
 

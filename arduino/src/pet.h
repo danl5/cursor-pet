@@ -21,6 +21,15 @@ enum GrowthStage {
     GROWTH_WIZARD    // 200+ tasks
 };
 
+// Character types
+enum PetChar : int {
+    CHAR_CAT = 0,
+    CHAR_ROBOT,
+    CHAR_COUNT
+};
+
+const char* const charNames[] = {"Cat", "Robot"};
+
 // Idle behavior types (randomly triggered during PET_IDLE)
 enum IdleBehavior {
     IDLE_NONE = 0,
@@ -53,6 +62,9 @@ public:
     int getActivityThoughts() const { return _activityThoughts; }
     int getActivityTools() const { return _activityTools; }
     int getStreakCount() const { return _streakCount; }
+    int getCharIndex() const { return _charIndex; }
+    void nextChar();
+    void setChar(int idx);
 
 private:
     M5Canvas* _sprite = nullptr;
@@ -66,6 +78,7 @@ private:
     int _growthStage;
     int _streakCount;
     int _streakDay;
+    int _charIndex;
 
     int _activityThoughts;
     int _activityTools;
