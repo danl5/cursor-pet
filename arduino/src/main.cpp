@@ -226,7 +226,6 @@ class PetServerCallbacks : public BLEServerCallbacks {
 
     void onDisconnect(BLEServer* s) override {
         bleConnected = false;
-        pet.setState(PET_SLEEP);
         Serial.println("BLE disconnected");
         BLEDevice::startAdvertising();
     }
@@ -234,8 +233,10 @@ class PetServerCallbacks : public BLEServerCallbacks {
 
 class PetCharCallbacks : public BLECharacteristicCallbacks {
     void onWrite(BLECharacteristic* c) override {
+        String val = c->getValue().c_str();
+        Serial.printf("BLE rx: %s\n", val.c_str());
         bleConnected = true;
-        handleBLECommand(c->getValue().c_str());
+        handleBLECommand(val.c_str());
     }
 };
 

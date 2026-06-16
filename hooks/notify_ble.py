@@ -43,7 +43,8 @@ async def send_command(data: dict, timeout: float = 5.0) -> bool:
     try:
         async with BleakClient(device, timeout=timeout) as client:
             payload = json.dumps(data).encode()
-            await client.write_gatt_char(RX_CHAR_UUID, payload, response=False)
+            await client.write_gatt_char(RX_CHAR_UUID, payload, response=True)
+            await asyncio.sleep(0.3)
             return True
     except Exception as e:
         print(f"BLE write failed: {e}", file=sys.stderr)
