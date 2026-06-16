@@ -234,7 +234,7 @@ void PixelPet::_drawHud() {
     _sprite->setTextSize(1);
     const char* labels[] = {"Sleep", "Idle", "Think", "Work", "ERROR", "?!", "*"};
     int labelIdx = (_state <= PET_ERROR) ? _state : PET_IDLE;
-    if (_toolLabel[0] && _state == PET_WORKING) {
+    if (_toolLabel[0] && _state == PET_WORKING && _shakeTimer == 0) {
         char buf[32];
         snprintf(buf, sizeof(buf), "%s", _toolLabel);
         _sprite->drawString(buf, LCD_WIDTH / 2, 4);
@@ -273,7 +273,7 @@ void PixelPet::_drawHud() {
         _sprite->drawString(sbuf, LCD_WIDTH - 4, 214);
     }
 
-    if (_modelName[0]) {
+    if (_modelName[0] && _state != PET_SLEEP && _state != PET_SHAKE && _celebrateTimer == 0) {
         _sprite->setTextDatum(BC_DATUM);
         _sprite->setTextColor(0x4208, C_BG);
         _sprite->drawString(_modelName, LCD_WIDTH / 2, 206);
