@@ -360,6 +360,7 @@ void setup() {
     lcd = &M5.Lcd;
     lcd->setRotation(0);
     lcd->fillScreen(TFT_BLACK);
+    M5.Lcd.setBrightness(80);
 
     PixelPet::drawBootScreen(lcd, "Starting...", 30);
 
@@ -483,7 +484,7 @@ void loop() {
             }
         }
     } else {
-        M5.Lcd.setBrightness(128);
+        M5.Lcd.setBrightness(80);
     }
 
     switch (currentMode) {
