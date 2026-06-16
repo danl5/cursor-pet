@@ -227,7 +227,17 @@ void PixelPet::_drawHud() {
     const char* stages[] = {"Baby", "Kitten", "Adult", "Wizard"};
     _sprite->setTextDatum(TR_DATUM);
     _sprite->setTextColor(0xFEA0, C_HUD_BG);
-    _sprite->drawString(charNames[_charIndex], LCD_WIDTH - 4, 4);
+    if (_totalTasks >= 200) {
+        char buf[20];
+        snprintf(buf, sizeof(buf), "%s ~", charNames[_charIndex]);
+        _sprite->drawString(buf, LCD_WIDTH - 4, 4);
+    } else if (_totalTasks >= 50) {
+        char buf[20];
+        snprintf(buf, sizeof(buf), "%s *", charNames[_charIndex]);
+        _sprite->drawString(buf, LCD_WIDTH - 4, 4);
+    } else {
+        _sprite->drawString(charNames[_charIndex], LCD_WIDTH - 4, 4);
+    }
 
     _sprite->fillRect(0, 212, LCD_WIDTH, 28, C_BG);
     _sprite->setTextSize(1);

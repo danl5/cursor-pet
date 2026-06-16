@@ -16,7 +16,7 @@ PixelPet pet;
 #define BTN_A_PIN 11
 #define BTN_B_PIN 12
 
-enum DisplayMode { MODE_PET, MODE_STATUS };
+enum DisplayMode { MODE_PET, MODE_STATUS, MODE_GAME };
 static DisplayMode currentMode = MODE_PET;
 
 static bool btnA_pressed = false;
@@ -32,6 +32,72 @@ static int batteryPct = -1;
 static bool authPending = false;
 static bool authAccepted = false;
 static bool authRejected = false;
+
+static int gameScore = 0;
+static int playerX = 60;
+static int obstacleY = -20;
+static int obstacleX = 40;
+static int gameSpeed = 2;
+static uint32_t lastGameTick = 0;
+static uint32_t gameExitHold = 0;
+
+void drawGame() {
+    lcd->fillScreen(TFT_BLACK);
+    lcd->setTextColor(0xFEA0, TFT_BLACK);
+    lcd->setTextDatum(TC_DATUM);
+    lcd->setTextSize(2);
+    char sbuf[16];
+    snprintf(sbuf, sizeof(sbuf), "%d", gameScore);
+    lcd->drawString(sbuf, LCD_WIDTH / 2, 10);
+    lcd->fillRect(playerX, 210, 16, 16, 0x07E0);
+    lcd->fillRect(obstacleX, obstacleY, 12, 12, 0xF800);
+    lcd->setTextColor(0x4208, TFT_BLACK);
+    lcd->setTextDatum(TL_DATUM);
+    lcd->setTextSize(1);
+    lcd->drawString("A< B> Bhold:exit", 4, 225);
+}
+
+void initGame() {
+    gameScore = 0; playerX = 60; obstacleY = -20;
+    obstacleX = random(10, 110); gameSpeed = 2;
+    lastGameTick = millis(); gameExitHold = 0;
+}
+
+void tickGame() {
+    if (millis() - lastGameTick < 40) return;
+    lastGameTick = millis();
+
+    obstacleY += gameSpeed;
+    if (obstacleY > 240) {
+        obstacleY = -12; obstacleX = random(10, 110);
+        gameScore++;
+        if (gameScore > 0 && gameScore % 10 == 0) gameSpeed++;
+    }
+
+    if (obstacleY + 12 > 210 && obstacleY < 226 &&
+        obstacleX + 12 > playerX && obstacleX < playerX + 16) {
+        delay(300);
+        initGame();
+        currentMode = MODE_PET;
+        return;
+    }
+
+    if (digitalRead(BTN_A_PIN) == LOW) playerX -= 3;
+    if (digitalRead(BTN_B_PIN) == LOW) {
+        playerX += 3;
+        gameExitHold = millis();
+    } else {
+        if (gameExitHold > 0 && millis() - gameExitHold > 1000) {
+            initGame();
+            currentMode = MODE_PET;
+            return;
+        }
+        gameExitHold = 0;
+    }
+    if (playerX < 0) playerX = 0;
+    if (playerX > LCD_WIDTH - 16) playerX = LCD_WIDTH - 16;
+    drawGame();
+}
 
 void readButtons() {
     static bool lastA = false, lastB = false;
@@ -445,6 +511,18 @@ void loop() {
         lastBPress = millis();
     }
 
+    if (currentMode == MODE_PET &&
+        digitalRead(BTN_A_PIN) == LOW && digitalRead(BTN_B_PIN) == LOW) {
+        delay(500);
+        if (digitalRead(BTN_A_PIN) == LOW && digitalRead(BTN_B_PIN) == LOW) {
+            initGame();
+            currentMode = MODE_GAME;
+            lastBPress = 0;
+            btnA_pressed = false;
+            btnB_released = false;
+        }
+    }
+
     if (btnA_pressed && currentMode == MODE_STATUS) {
         pet.nextChar();
         DeviceSettings& s2 = settingsGet();
@@ -499,5 +577,8 @@ void loop() {
             }
             break;
         }
+        case MODE_GAME:
+            tickGame();
+            break;
     }
 }
