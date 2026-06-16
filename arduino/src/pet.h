@@ -65,6 +65,7 @@ public:
     int getActivityTools() const { return _activityTools; }
     int getStreakCount() const { return _streakCount; }
     int getCharIndex() const { return _charIndex; }
+    const char* getCharName() const { return charNames[_charIndex]; }
     void nextChar();
     void setChar(int idx);
 

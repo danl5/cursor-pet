@@ -129,7 +129,13 @@ void drawStatusScreen() {
     y += lineH + 6;
 
     const char* stages[] = {"Baby", "Kitten", "Adult", "Wizard"};
+    snprintf(sbuf, sizeof(sbuf), "Char: %s", pet.getCharName());
+    lcd->setTextColor(0x07E0, TFT_BLACK);
+    lcd->drawString(sbuf, 4, y);
+    y += lineH + 6;
+
     snprintf(sbuf, sizeof(sbuf), "Stage: %s", stages[pet.getGrowthStage()]);
+    lcd->setTextColor(0x001F, TFT_BLACK);
     lcd->drawString(sbuf, 4, y);
     y += lineH + 10;
 
@@ -483,7 +489,7 @@ void loop() {
             break;
         case MODE_STATUS:
             drawStatusScreen();
-            delay(200);
+            delay(500);
             break;
     }
 }
