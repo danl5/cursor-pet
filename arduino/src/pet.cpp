@@ -466,10 +466,16 @@ void PixelPet::_drawWork() {
     int x = (LCD_WIDTH - sw * scale) / 2;
     int y = 80 + bounce;
 
+    uint16_t ringColor = 0x07E0;
+    if (strcmp(_toolLabel, "Read") == 0)
+        ringColor = 0x001F;
+    else if (strcmp(_toolLabel, "Shell") == 0)
+        ringColor = 0xFEA0;
+
     _sprite->drawEllipse(x + sw * scale / 2, y + sh * scale / 2,
-                         sw * scale / 2 + 8, sh * scale / 2 + 8, 0x07E0);
+                         sw * scale / 2 + 8, sh * scale / 2 + 8, ringColor);
     _sprite->drawEllipse(x + sw * scale / 2, y + sh * scale / 2,
-                         sw * scale / 2 + 7, sh * scale / 2 + 7, 0x07E0);
+                         sw * scale / 2 + 7, sh * scale / 2 + 7, ringColor);
 
     drawSpriteToCanvas(_sprite, x, y, sprite, scale);
 
