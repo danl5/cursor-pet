@@ -23,13 +23,13 @@ enum GrowthStage {
 
 // Character types
 enum PetChar : int {
-    CHAR_ROBOT = 0,
-    CHAR_MELON,
+    CHAR_MELON = 0,
+    CHAR_ROBOT,
     CHAR_SUN,
     CHAR_COUNT
 };
 
-const char* const charNames[] = {"Robot", "Melon", "Sun"};
+const char* const charNames[] = {"Melon", "Robot", "Sun"};
 
 // Idle behavior types (randomly triggered during PET_IDLE)
 enum IdleBehavior {
