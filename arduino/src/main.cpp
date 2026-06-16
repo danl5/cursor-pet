@@ -227,6 +227,7 @@ class PetServerCallbacks : public BLEServerCallbacks {
     void onDisconnect(BLEServer* s) override {
         bleConnected = false;
         Serial.println("BLE disconnected");
+        BLEDevice::startAdvertising();
     }
 };
 
@@ -443,21 +444,11 @@ void loop() {
         lastBPress = millis();
     }
 
-    if (btnA_pressed) {
-        if (currentMode == MODE_STATUS) {
-            pet.nextChar();
-            DeviceSettings& s2 = settingsGet();
-            s2.charIndex = pet.getCharIndex();
-            settingsSave();
-        } else if (!bleConnected) {
-            BLEDevice::startAdvertising();
-            Serial.println("BLE advertising restarted");
-            lcd->fillScreen(TFT_BLACK);
-            lcd->setTextColor(0xFEA0, TFT_BLACK);
-            lcd->setTextDatum(MC_DATUM);
-            lcd->drawString("BLE On", LCD_WIDTH / 2, LCD_HEIGHT / 2);
-            delay(800);
-        }
+    if (btnA_pressed && currentMode == MODE_STATUS) {
+        pet.nextChar();
+        DeviceSettings& s2 = settingsGet();
+        s2.charIndex = pet.getCharIndex();
+        settingsSave();
     }
     btnA_pressed = false;
 
