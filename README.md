@@ -7,12 +7,11 @@ A pixel pet companion for your Cursor AI coding sessions, running on M5Stack Sti
 - **5 reactive states**: Sleep, Idle, Thinking, Working, Error — all with pixel-art animations
 - **Activity heatmap**: bottom-screen bars track thoughts (blue), tool calls (green), and session activity (yellow)
 - **Coding streak**: daily count with celebrations at 7, 30, 100, 365 days. Positive-only, no punishment for breaks.
-- **Shake interaction**: shake the device → cat wobbles (@_@). Uses built-in BMI270 IMU.
+- **Shake interaction**: shake the device → character wobbles (@_@). Uses built-in BMI270 IMU.
 - **BLE communication**: Nordic UART Service (NUS). Zero WiFi configuration, zero network dependency.
 - **Per-device authorization**: first connection requires A-button confirmation. Authorized devices are remembered.
-- **Growth system**: Baby → Kitten → Adult → Wizard as tasks accumulate
 - **6 idle behaviors**: stretch, yawn, tail chase, face wipe, look around, ear flop — randomly triggered
-- **4 switchable characters**: Cat, Robot, Watermelon, Sun — cycle with one button
+- **3 switchable characters**: Melon, Robot, Sun — cycle with one button (default: Melon)
 
 ## Controls
 
@@ -25,14 +24,13 @@ A pixel pet companion for your Cursor AI coding sessions, running on M5Stack Sti
 
 ## Characters
 
-Press **B** to enter the settings screen, then press **A** to cycle through characters. Selection persists across reboots.
+Press **B** to enter the settings screen, then press **A** to cycle through characters. Selection persists across reboots. Default is Melon.
 
-| Character | Appearance | Growth | Notes |
-|-----------|-----------|--------|-------|
-| **Cat** | Yellow body, orange ears, pink cheeks, small black w-mouth | 4 stages (Baby→Wizard) | 6 idle behaviors, tail wag, zzz sleep |
-| **Robot** | Silver body, cyan LED eyes, antenna, orange grille | Single stage | Speaker-grille mouth, chest panel blink |
-| **Watermelon** | Green rind, red flesh, seed eyes | Single stage | White highlight eyes, X eyes on error |
-| **Sun** | Yellow body, orange radiating rays, warm smile | Single stage | Dimmed sleep mode, red flare on error |
+| Character | Appearance | Notes |
+|-----------|-----------|-------|
+| **Melon** | Green rind, red flesh, seed eyes with white highlight | Default. X eyes on error. |
+| **Robot** | Silver body, cyan LED eyes, antenna, orange grille | Chest panel blink. |
+| **Sun** | Yellow body, orange radiating rays, warm smile | Dimmed sleep mode, red flare on error. |
 
 ## Hardware
 
@@ -175,20 +173,15 @@ The display is 135×240 portrait. The cat is a 16×16 hand-drawn pixel sprite sc
 
 ```
 ╔══════════════════════════╗  0px   ─── top bar (135×28, dark teal)
-║ 85%     Idle     Wizard ║         battery · state · growth stage
+║ 85%     Idle      Melon ║         battery · state · character
 ╠══════════════════════════╣  28px
-║          ●●●●●●          ║         ─── ears (yellow + orange inner)
-║       ●●●●●●●●●●●●       ║
-║     ●●●●●●●●●●●●●●●●     ║
-║    ●●●●●●●●●●●●●●●●●●    ║         ─── head (yellow, rounded)
-║   ●●●●         ●●●●●●    ║         ─── eyes (black + white sparkle)
-║   ●●●●  ◆▣◆  ◆▣◆ ●●●●    ║
-║   ●●●●  ■     ■  ●●●●    ║         ─── cheeks (pink)
-║   ●●●●  ■  ■  ■  ●●●●    ║         ─── mouth ω (pink 3 dots)
-║    ●●●●●●●●●●●●●●●●      ║
-║     ●●●●●●●●●●●●●●       ║         ─── chin (yellow, tapered)
-║      ●●●●●●●●●●●●        ║
-║         ●●●●●●●          ║
+║                          ║
+║         [sprite]         ║  184px pet area — centered sprite + overlay
+║      64×64 @ 4× scale    ║     · Sleep: zzz floating
+║                          ║     · Idle: blinking + idle behaviors
+║                          ║     · Thinking: blue thought bubbles
+║                          ║     · Working: green glow ring + paws
+║                          ║     · Error: X eyes, red accents
 ║                          ║
 ╠══════════════════════════╣  212px  ─── footer (135×28, black)
 ║ T:0 F:3 E:0         D3   ║         stats · streak
@@ -200,7 +193,7 @@ The display is 135×240 portrait. The cat is a 16×16 hand-drawn pixel sprite sc
 **Top bar** (0–27px, dark teal `0x10A2`):
 - Left: battery % (white)
 - Center: state — Sleep / Idle / Think / Work / ERROR
-- Right: character name — Cat / Robot / Melon / Sun, or growth stage for Cat (yellow)
+- Right: character name — Melon / Robot / Sun
 
 **Pet area** (28–211px, black):
 - Cat sprite centered, scaled 4× (adult) or 6× (baby/kitten)
@@ -217,7 +210,7 @@ The display is 135×240 portrait. The cat is a 16×16 hand-drawn pixel sprite sc
 
 ### Sprite details
 
-Each cat face is a 16×16 pixel bitmap. Pink dots forming a `ω` shape create the classic "w" cat smile, with two pink cheek dots on each side. Eyes are black squares with a white pixel highlight. Ears are yellow triangles with orange inner shading. Colors are all hand-picked 16-bit RGB565: yellow `FEA0`, dark yellow `C580`, orange `FBE0`, pink `FE19`, and red `F800` for error tint.
+Each character is a 16×16 pixel sprite drawn at 4× scale (64×64 screen pixels). Sprites are hand-designed RGB565 arrays stored in PROGMEM. Five states per character: eyes open (idle), eyes closed (blink), sleeping, thinking, and error (X eyes with red accents).
 
 ## Project Structure
 
