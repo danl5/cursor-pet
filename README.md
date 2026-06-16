@@ -12,15 +12,27 @@ A pixel pet companion for your Cursor AI coding sessions, running on M5Stack Sti
 - **Per-device authorization**: first connection requires A-button confirmation. Authorized devices are remembered.
 - **Growth system**: Baby → Kitten → Adult → Wizard as tasks accumulate
 - **6 idle behaviors**: stretch, yawn, tail chase, face wipe, look around, ear flop — randomly triggered
+- **4 switchable characters**: Cat, Robot, Watermelon, Sun — cycle with one button
 
 ## Controls
 
-| Button | Action |
-|--------|--------|
-| **A** | Return to Pet from Settings screen |
-| **B** (short press) | Toggle between Pet and Settings screen |
-| **B** (long press, 1s) | Factory reset (clear growth data + authorization) |
-| **Shake** | Startle the pet (dizzy animation) |
+| Button | Context | Action |
+|--------|---------|--------|
+| **A** | Settings screen | Cycle to next character (saved to flash) |
+| **B** (short press) | Pet screen → Settings, Settings → Pet | Toggle between screens |
+| **B** (long press, 1s) | Any | Factory reset (clear growth + authorization) |
+| **Shake** | Pet screen | Startle the pet (dizzy animation) |
+
+## Characters
+
+Press **B** to enter the settings screen, then press **A** to cycle through characters. Selection persists across reboots.
+
+| Character | Appearance | Growth | Notes |
+|-----------|-----------|--------|-------|
+| **Cat** | Yellow body, orange ears, pink cheeks, small black w-mouth | 4 stages (Baby→Wizard) | 6 idle behaviors, tail wag, zzz sleep |
+| **Robot** | Silver body, cyan LED eyes, antenna, orange grille | Single stage | Speaker-grille mouth, chest panel blink |
+| **Watermelon** | Green rind, red flesh, seed eyes | Single stage | White highlight eyes, X eyes on error |
+| **Sun** | Yellow body, orange radiating rays, warm smile | Single stage | Dimmed sleep mode, red flare on error |
 
 ## Hardware
 
@@ -188,7 +200,7 @@ The display is 135×240 portrait. The cat is a 16×16 hand-drawn pixel sprite sc
 **Top bar** (0–27px, dark teal `0x10A2`):
 - Left: battery % (white)
 - Center: state — Sleep / Idle / Think / Work / ERROR
-- Right: growth stage — Baby / Kitten / Adult / Wizard (yellow)
+- Right: character name — Cat / Robot / Melon / Sun, or growth stage for Cat (yellow)
 
 **Pet area** (28–211px, black):
 - Cat sprite centered, scaled 4× (adult) or 6× (baby/kitten)
