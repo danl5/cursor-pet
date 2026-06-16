@@ -495,7 +495,7 @@ void loop() {
             lcd->drawString("Factory Reset", LCD_WIDTH / 2, LCD_HEIGHT / 2);
             delay(1500);
             currentMode = MODE_PET;
-        } else {
+        } else if (currentMode != MODE_GAME) {
             if (currentMode == MODE_PET) {
                 currentMode = MODE_STATUS;
                 pet.setState(PET_SLEEP);
