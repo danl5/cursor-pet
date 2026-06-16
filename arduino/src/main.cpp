@@ -264,8 +264,8 @@ void setupBLE() {
 
     BLEAdvertising* adv = BLEDevice::getAdvertising();
     adv->addServiceUUID(SERVICE_UUID);
-    adv->setMinInterval(1600);
-    adv->setMaxInterval(3200);
+    adv->setMinInterval(320);
+    adv->setMaxInterval(640);
 
     BLEDevice::startAdvertising();
     Serial.println("BLE advertising as " BLE_DEVICE_NAME);
