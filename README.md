@@ -159,65 +159,53 @@ Commands are JSON written to the RX characteristic:
 
 ## Screen Layout
 
+The display is 135×240 portrait. The cat is a 16×16 hand-drawn pixel sprite scaled to 4× or 6×.
+
 ```
-┌─────────────────────────────┐  ← 0px   (135×28 dark-teal bar)
-│ 85%        Idle       Kitten│          battery │ state │ growth stage
-├─────────────────────────────┤  ← 28px
-│                             │
-│                             │
-│         ◆       ◆           │  ← eyes (black with white highlight)
-│      ■           ■          │  ← pink cheeks (FE19)
-│      ■    ■     ■           │  ← mouth ω (pink) + nose (black)
-│                             │
-│     [cat sprite 96×96]      │  184px pet area (black background)
-│      + state animation      │     • Sleep: zzz floating
-│      + idle behavior        │     • Idle: tail wagging line
-│                             │     • Thinking: blue bubbles
-│                             │     • Working: green glow rings
-│                             │     • Error: red flash alternating
-│                             │
-├─────────────────────────────┤  ← 212px (135×28 black footer)
-│ T:0  F:3  E:0          D3   │  stats left │ streak day right
-│ ██████████████████████████  │  ← thin color bars (4px tall)
-│ ████░░░░░█████░░░░░█████░░  │  blue=thoughts  green=tools  yellow=activity
-└─────────────────────────────┘  ← 240px
-```
+╔══════════════════════════╗  0px   ─── top bar (135×28, dark teal)
+║ 85%     Idle     Wizard ║         battery · state · growth stage
+╠══════════════════════════╣  28px
+║          ●●●●●●          ║         ─── ears (yellow + orange inner)
+║       ●●●●●●●●●●●●       ║
+║     ●●●●●●●●●●●●●●●●     ║
+║    ●●●●●●●●●●●●●●●●●●    ║         ─── head (yellow, rounded)
+║   ●●●●         ●●●●●●    ║         ─── eyes (black + white sparkle)
+║   ●●●●  ◆▣◆  ◆▣◆ ●●●●    ║
+║   ●●●●  ■     ■  ●●●●    ║         ─── cheeks (pink)
+║   ●●●●  ■  ■  ■  ●●●●    ║         ─── mouth ω (pink 3 dots)
+║    ●●●●●●●●●●●●●●●●      ║
+║     ●●●●●●●●●●●●●●       ║         ─── chin (yellow, tapered)
+║      ●●●●●●●●●●●●        ║
+║         ●●●●●●●          ║
+║                          ║
+╠══════════════════════════╣  212px  ─── footer (135×28, black)
+║ T:0 F:3 E:0         D3   ║         stats · streak
+║ ████████ ████████ ██████ ║         blue=thoughts green=tools yellow=activity
+╚══════════════════════════╝  240px
 
-### Top bar explained
+### Key areas
 
-| Position | Content | Color |
-|----------|---------|-------|
-| Left | Battery percentage (e.g. `85%`) | White |
-| Center | State label: Sleep / Idle / Think / Work / ERROR | White |
-| Right | Growth stage: Baby / Kitten / Adult / Wizard | Yellow `0xFEA0` |
+**Top bar** (0–27px, dark teal `0x10A2`):
+- Left: battery % (white)
+- Center: state — Sleep / Idle / Think / Work / ERROR
+- Right: growth stage — Baby / Kitten / Adult / Wizard (yellow)
 
-### Pet area explained
+**Pet area** (28–211px, black):
+- Cat sprite centered, scaled 4× (adult) or 6× (baby/kitten)
+- Animated effects overlay: zzz, thought bubbles, glow ring, sparkles
+- State-specific eye/mouth/color variations (see below)
 
-The cat is a 16×16 pixel sprite drawn at 4× scale (64×64) or 6× scale for Baby stage (96×96 from 8×8). Color palette:
+**Bottom footer** (212–240px):
+- `T: tokens  F: tool calls  E: errors` (in-session counters)
+- `D#` streak day counter (right-aligned, yellow). At 7/30/100/365 days, triggers celebration.
+- Three horizontal activity bars (4px tall at y=226):
+  - Blue = thought events
+  - Green = tool call events  
+  - Yellow = combined session activity
 
-| Color | Hex | Used for |
-|-------|-----|----------|
-| Yellow | `FEA0` | Body, ears, face |
-| Dark Yellow | `C580` | Shading |
-| Orange | `FBE0` | Inner ears, accents |
-| Pink | `FE19` | Cheeks (2 dots), mouth ω (3 dots) |
-| Black | `0000` | Eyes, nose, background |
-| White | `FFFF` | Eye highlights |
-| Red | `F800` | Error body tint |
+### Sprite details
 
-The mouth is a classic ω (w-shaped cat smile) made of 3 pink pixels forming a wide smile curve, with the black nose pixel centered above it.
-
-### Bottom footer explained
-
-| Position | Content | Description |
-|----------|---------|-------------|
-| Left | `T:0 F:3 E:0` | T=tokens, F=tool calls, E=errors (in-session counters) |
-| Right | `D7` | Streak day count (appears when > 0). 7, 30, 100, 365 trigger celebrations. |
-| Bottom bars | blue / green / yellow | Activity heatmap: blue=thought count, green=tool call count, yellow=combined session activity. Bars grow proportionally, max at 20 events. |
-
-### Settings screen (short B press)
-
-Shows BLE status, device name, battery, streak days, total tasks, growth stage. Long-press B to factory reset (clears growth + authorization).
+Each cat face is a 16×16 pixel bitmap. Pink dots forming a `ω` shape create the classic "w" cat smile, with two pink cheek dots on each side. Eyes are black squares with a white pixel highlight. Ears are yellow triangles with orange inner shading. Colors are all hand-picked 16-bit RGB565: yellow `FEA0`, dark yellow `C580`, orange `FBE0`, pink `FE19`, and red `F800` for error tint.
 
 ## Project Structure
 
