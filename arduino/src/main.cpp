@@ -536,11 +536,16 @@ void loop() {
         }
     }
 
-    if (btnA_pressed && currentMode == MODE_STATUS) {
-        pet.nextChar();
-        DeviceSettings& s2 = settingsGet();
-        s2.charIndex = pet.getCharIndex();
-        settingsSave();
+    if (btnA_pressed) {
+        if (currentMode == MODE_STATUS) {
+            pet.nextChar();
+            DeviceSettings& s2 = settingsGet();
+            s2.charIndex = pet.getCharIndex();
+            settingsSave();
+        } else {
+            pet.setStats(0, 0, 0);
+            Serial.println("Session reset");
+        }
     }
     btnA_pressed = false;
 
