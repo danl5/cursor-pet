@@ -542,8 +542,14 @@ void loop() {
             DeviceSettings& s2 = settingsGet();
             s2.charIndex = pet.getCharIndex();
             settingsSave();
-        } else {
+        } else if (currentMode == MODE_PET) {
             pet.setStats(0, 0, 0);
+            lcd->fillScreen(TFT_BLACK);
+            lcd->setTextColor(0x07E0, TFT_BLACK);
+            lcd->setTextDatum(MC_DATUM);
+            lcd->setTextSize(2);
+            lcd->drawString("Reset!", LCD_WIDTH / 2, LCD_HEIGHT / 2);
+            delay(500);
             Serial.println("Session reset");
         }
     }
