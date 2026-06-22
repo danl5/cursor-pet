@@ -308,6 +308,7 @@ class PetServerCallbacks : public BLEServerCallbacks {
     void onDisconnect(BLEServer* s) override {
         bleConnected = false;
         Serial.println("BLE disconnected");
+        delay(100);
         BLEDevice::startAdvertising();
     }
 };
@@ -345,8 +346,8 @@ void setupBLE() {
 
     BLEAdvertising* adv = BLEDevice::getAdvertising();
     adv->addServiceUUID(SERVICE_UUID);
-    adv->setMinInterval(320);
-    adv->setMaxInterval(640);
+    adv->setMinInterval(160);
+    adv->setMaxInterval(320);
 
     BLEDevice::startAdvertising();
     Serial.println("BLE advertising as " BLE_DEVICE_NAME);
