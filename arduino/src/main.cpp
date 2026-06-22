@@ -356,6 +356,7 @@ void setupPet() {
     pet.setGrowthData(s.totalTasks, s.growthStage);
     pet.setStreak(s.streakCount, s.streakLastDay);
     pet.setChar(s.charIndex);
+    pet.addActivity(s.activityThoughts, s.activityTools);
 }
 
 static int todayYMD() {
@@ -554,8 +555,13 @@ void loop() {
         if (s.totalTasks != pet.getTotalTasks() || s.growthStage != pet.getGrowthStage()) {
             s.totalTasks = pet.getTotalTasks();
             s.growthStage = pet.getGrowthStage();
-            settingsSave();
         }
+        if (s.activityThoughts != pet.getActivityThoughts() ||
+            s.activityTools != pet.getActivityTools()) {
+            s.activityThoughts = pet.getActivityThoughts();
+            s.activityTools = pet.getActivityTools();
+        }
+        settingsSave();
 
         int today = todayYMD();
         if (today > 0 && today != lastDayCheck) {
