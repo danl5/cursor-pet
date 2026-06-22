@@ -160,6 +160,7 @@ void PixelPet::tick() {
     if (_lastState == PET_WORKING && _state != PET_WORKING && _state != PET_SHAKE && _state != PET_SLEEP) {
         _totalTasks++;
         _updateGrowth();
+        _lastState = _state;
         _celebrateTimer = 6;
         _celebrateFrame = 0;
         _confettiOffset = 0;
