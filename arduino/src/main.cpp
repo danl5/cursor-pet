@@ -21,7 +21,9 @@ static DisplayMode currentMode = MODE_PET;
 
 static bool btnA_pressed = false;
 static bool btnB_released = false;
+static bool btnA_released = false;
 static uint32_t lastBPress = 0;
+static uint32_t lastAPress = 0;
 static const uint32_t LONG_PRESS_MS = 1000;
 
 static bool bleConnected = false;
@@ -104,6 +106,7 @@ void readButtons() {
     bool a = (digitalRead(BTN_A_PIN) == LOW);
     bool b = (digitalRead(BTN_B_PIN) == LOW);
     if (a && !lastA) btnA_pressed = true;
+    if (!a && lastA) btnA_released = true;
     if (!b && lastB) btnB_released = true;
     lastA = a;
     lastB = b;
@@ -536,14 +539,15 @@ void loop() {
         }
     }
 
-    if (btnA_pressed) {
-        if (currentMode == MODE_STATUS) {
-            pet.nextChar();
-            DeviceSettings& s2 = settingsGet();
-            s2.charIndex = pet.getCharIndex();
-            settingsSave();
-        } else if (currentMode == MODE_PET) {
+    if (digitalRead(BTN_A_PIN) == LOW && lastAPress == 0) {
+        lastAPress = millis();
+    }
+
+    if (btnA_released) {
+        uint32_t held = millis() - lastAPress;
+        if (held >= LONG_PRESS_MS && currentMode == MODE_PET) {
             pet.setStats(0, 0, 0);
+            pet.resetActivity();
             lcd->fillScreen(TFT_BLACK);
             lcd->setTextColor(0x07E0, TFT_BLACK);
             lcd->setTextDatum(MC_DATUM);
@@ -551,9 +555,16 @@ void loop() {
             lcd->drawString("Reset!", LCD_WIDTH / 2, LCD_HEIGHT / 2);
             delay(500);
             Serial.println("Session reset");
+        } else if (held < LONG_PRESS_MS && currentMode == MODE_STATUS) {
+            pet.nextChar();
+            DeviceSettings& s2 = settingsGet();
+            s2.charIndex = pet.getCharIndex();
+            settingsSave();
         }
-    }
+        lastAPress = 0;
+        btnA_released = false;
     btnA_pressed = false;
+    }
 
     static uint32_t lastBatteryRead = 0;
     static int lastDayCheck = 0;

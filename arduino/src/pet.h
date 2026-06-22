@@ -55,6 +55,7 @@ public:
     void setModel(const char* name);
     void setTool(const char* name);
     void addActivity(int thoughts, int tools);
+    void resetActivity();
     void triggerShake();
     void triggerCelebrate(const char* reason);
     void setStreak(int count, int today);

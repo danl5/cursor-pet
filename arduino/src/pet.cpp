@@ -68,6 +68,11 @@ void PixelPet::addActivity(int thoughts, int tools) {
     _activityTools += tools;
 }
 
+void PixelPet::resetActivity() {
+    _activityThoughts = 0;
+    _activityTools = 0;
+}
+
 void PixelPet::triggerShake() {
     if (_state == PET_SHAKE || _celebrateTimer > 0) return;
     _lastState = _state;
